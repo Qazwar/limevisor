@@ -56,8 +56,6 @@ VmxInitializeProcessor(
 
     HvTraceBasic( "VMX Initialized on processor%d\n", HvGetCurrentProcessorNumber( ) );
 
-    *( ULONG32* )PageHooking = 'EMIW';
-
     return HVSTATUS_SUCCESS;
 }
 
