@@ -38,7 +38,7 @@ VmxHandleExitInternal PROC FRAME
     ;
     ;   vm passes control to this function on vmexit.
     ;
-    
+
     sub     rsp, 28h + (16 * 8)
     .ALLOCSTACK  28h + (16 * 8)
     .ENDPROLOG
@@ -51,18 +51,18 @@ VmxHandleExitInternal PROC FRAME
     mov     qword ptr [rsp + 28h + 50h], r10
     mov     qword ptr [rsp + 28h + 58h], r11
 
-    mov     r10, 4402h                          ; exit reason
-    vmread  r10, r10
-    cmp     r10b, 0Ah
-    jz      ExfHandleCpuid
-    cmp     r10b, 0Dh
-    jz      ExfHandleInvd
-    cmp     r10b, 37h
-    jz      ExfHandleSetbv
-    cmp     r10b, 1Fh
-    jz      ExfHandleRdmsr
-    cmp     r10b, 20h
-    jz      ExfHandleWrmsr
+    ;mov     r10, 4402h                          ; exit reason
+    ;vmread  r10, r10
+    ;cmp     r10b, 0Ah
+    ;jz      ExfHandleCpuid
+    ;cmp     r10b, 0Dh
+    ;jz      ExfHandleInvd
+    ;cmp     r10b, 37h
+    ;jz      ExfHandleSetbv
+    ;cmp     r10b, 1Fh
+    ;jz      ExfHandleRdmsr
+    ;cmp     r10b, 20h
+    ;jz      ExfHandleWrmsr
 
     mov     qword ptr [rsp + 28h + 00h], rax
     mov     qword ptr [rsp + 28h + 08h], rcx
@@ -83,8 +83,8 @@ VmxHandleExitInternal PROC FRAME
     lea     rcx, [rsp + 28h]
     call    VmxHandleExit
 
-    test    rax, rax
-    jnz     @exit_vmx
+    cmp     eax, 0
+    jl      @exit_vmx
 
     mov     rax, qword ptr [rsp + 28h + 00h]
     mov     rcx, qword ptr [rsp + 28h + 08h]
@@ -131,7 +131,7 @@ VmxHandleExitInternal PROC FRAME
 
     ;
     ;   if this is being called, the exit reason is likely
-    ;   a large fault, or a request to vmxoff. 
+    ;   a severe fault, or a request to vmxoff. 
     ;   restore the guest state, and jump back to where ever
     ;   we left off.
     ;

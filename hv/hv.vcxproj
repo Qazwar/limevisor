@@ -110,6 +110,7 @@
     <ClCompile Include="hardfault.c" />
     <ClCompile Include="inithv.c" />
     <ClCompile Include="instruction.c" />
+    <ClCompile Include="interrupt.c" />
     <ClCompile Include="mpexec.c" />
     <ClCompile Include="pagehook.c" />
     <ClCompile Include="trace.c" />

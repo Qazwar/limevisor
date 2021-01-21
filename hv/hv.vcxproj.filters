@@ -42,6 +42,9 @@
     <ClCompile Include="vmvmx.c">
       <Filter>Ex</Filter>
     </ClCompile>
+    <ClCompile Include="interrupt.c">
+      <Filter>Ex</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Headers">

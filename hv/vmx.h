@@ -70,20 +70,16 @@ typedef struct _VMX_PAGE_TABLE_BASE {
     //  NOTE: you could change these PML3's for 1GB PML3's
     //
 
-    EPT_PML4            PML4[ 512 ];
-    EPT_PML3            PML3[ 512 ];
-
-    union {
-        EPT_PML2        PML2[ 512 ][ 512 ];
-        EPT_PML2_LARGE  PML2Large[ 512 ][ 512 ];
-    };
+    EPT_PML Level4[ 512 ];
+    EPT_PML Level3[ 512 ];
+    EPT_PML Level2[ 512 ][ 512 ];
 
 } VMX_PAGE_TABLE_BASE, *PVMX_PAGE_TABLE_BASE;
 
 
 typedef struct _VMX_PAGE_TABLE {
-    EPT_PML1    PML1[ 512 ];
-    PEPT_PML2   PML2;
+    EPT_PML     PageEntry[ 512 ];
+    PEPT_PML    PageEntryParent;
     ULONG64     PhysicalBaseAddress;
     LIST_ENTRY  TableLinks;
 
@@ -162,7 +158,7 @@ typedef struct _SEGMENT_DESCRIPTOR {
             ULONG32 BaseAddressHigh : 8;
         };
 
-        ULONG32 Value;
+        ULONG32     Long;
     };
 
     ULONG32 BaseAddressUpper;
@@ -174,7 +170,7 @@ typedef struct _SEGMENT_DESCRIPTOR {
 #define VMX_EXIT_QUALIFICATION_ACCESS_CLTS                           0x00000002
 #define VMX_EXIT_QUALIFICATION_ACCESS_LMSW                           0x00000003
 
-typedef union _VMX_EXIT_QUALIFICATION_MOV_CR {
+typedef union _VMX_EQ_ACCESS_CONTROL {
     struct {
         ULONG64 ControlRegister : 4;
         ULONG64 AccessType : 2;
@@ -186,8 +182,37 @@ typedef union _VMX_EXIT_QUALIFICATION_MOV_CR {
         ULONG64 Reserved3 : 32;
     };
 
-    ULONG64 Value;
-} VMX_EXIT_QUALIFICATION_MOV_CR, *PVMX_EXIT_QUALIFICATION_MOV_CR;
+    ULONG64     Long;
+} VMX_EQ_ACCESS_CONTROL, *PVMX_EQ_ACCESS_CONTROL;
+
+typedef enum _VMX_INTERRUPT_TYPE {
+    VmxInterruptExternal = 0,
+    VmxInterruptNonMaskable = 2,
+    VmxInterruptHardwareException = 3,
+    VmxInterruptSoftware = 4,
+    VmxInterruptPrivilegedSoftware = 5,
+    VmxInterruptSoftwareException = 6,
+    VmxInterruptOtherEvent = 7,
+    VmxInterruptMaximum = 7
+} VMX_INTERRUPT_TYPE;
+
+typedef union _VMX_INTERRUPT_INFORMATION {
+    struct {
+        ULONG32 Vector : 8;
+        ULONG32 Type : 3;
+        ULONG32 ErrorCode : 1;
+        ULONG32 Reserved1 : 19;
+        ULONG32 Valid : 1;
+    };
+
+    ULONG32     Long;
+} VMX_INTERRUPT_INFORMATION, *PVMX_INTERRUPT_INFORMATION;
+
+typedef struct _VMX_PCB {
+    PVOID Address;
+    ULONG Number;
+
+} VMX_PCB, *PVMX_PCB;
 
 #define IA32_FEATURE_CONTROL                                         0x0000003A
 
@@ -547,19 +572,19 @@ VmxTerminateProcessor(
 
 VOID
 VmxGetProcessorDescriptor(
-    __in PVMX_PROCESSOR_DESCRIPTOR  ProcessorDescriptor
+    __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 );
 
 HVSTATUS
 VmxInitializeProcessorGuestControl(
-    __in PVMX_PROCESSOR_STATE       ProcessorState,
-    __in PVMX_PROCESSOR_DESCRIPTOR  ProcessorDescriptor
+    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 );
 
 HVSTATUS
 VmxInitializeProcessorHostControl(
-    __in PVMX_PROCESSOR_STATE       ProcessorState,
-    __in PVMX_PROCESSOR_DESCRIPTOR  ProcessorDescriptor
+    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 );
 
 HVSTATUS

@@ -5,9 +5,9 @@
 
 HVSTATUS
 ExHandleUnimplemented(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PVMX_EXIT_TRAP_FRAME   TrapFrame,
-    __in PVMX_EXIT_STATE        ExitState
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_EXIT_TRAP_FRAME TrapFrame,
+    __in PVMX_EXIT_STATE      ExitState
 )
 {
     ProcessorState;

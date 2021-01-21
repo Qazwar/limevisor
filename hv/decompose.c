@@ -4,9 +4,9 @@
 #include "hv.h"
 
 PVMX_PAGE_TABLE
-EptDecomposeLargeEntry(
+EptDecomposeLargeLevel2(
     __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PEPT_PML2_LARGE        PML2Large
+    __in PEPT_PML               LargePage
 )
 {
     //
@@ -21,38 +21,34 @@ EptDecomposeLargeEntry(
 
     PVMX_PAGE_TABLE PageTable;
 
-    PEPT_PML2 PML2;
-
     PHYSICAL_ADDRESS Max = { ~0ULL };
-
-    PML2 = ( PEPT_PML2 )PML2Large;
 
     PageTable = MmAllocateContiguousMemory( sizeof( VMX_PAGE_TABLE ), Max );//ExAllocatePoolWithTag( NonPagedPool, sizeof( VMX_PAGE_TABLE ), EPT_POOL_TAG );
     RtlZeroMemory( PageTable, sizeof( VMX_PAGE_TABLE ) );
 
-    PageTable->PML2 = PML2;
-    PageTable->PhysicalBaseAddress = PML2Large->PageFrameNumber * 0x200000;
+    PageTable->PageEntryParent = LargePage;
+    PageTable->PhysicalBaseAddress = LargePage->PageFrameNumber << 12;
 
-    for (ULONG64 CurrentEntry = 0; CurrentEntry < 512; CurrentEntry++) {
+    for ( ULONG64 CurrentEntry = 0; CurrentEntry < 512; CurrentEntry++ ) {
 
-        PageTable->PML1[ CurrentEntry ].Value = 0;
-        PageTable->PML1[ CurrentEntry ].MemoryType = PML2Large->MemoryType;
-        PageTable->PML1[ CurrentEntry ].IgnorePat = PML2Large->IgnorePat;
-        PageTable->PML1[ CurrentEntry ].SuppressVe = PML2Large->SuppressVe;
-        PageTable->PML1[ CurrentEntry ].ReadAccess = 1;
-        PageTable->PML1[ CurrentEntry ].WriteAccess = 1;
-        PageTable->PML1[ CurrentEntry ].ExecuteAccess = 1;
-        PageTable->PML1[ CurrentEntry ].PageFrameNumber = ( PageTable->PhysicalBaseAddress + CurrentEntry * 0x1000 ) / 0x1000;
-        HvTraceBasic( "PML1 decomposure %p\n", ( PageTable->PhysicalBaseAddress + CurrentEntry * 0x1000 ) );
+        PageTable->PageEntry[ CurrentEntry ].Long = 0;
+        PageTable->PageEntry[ CurrentEntry ].MemoryType = LargePage->MemoryType;
+        PageTable->PageEntry[ CurrentEntry ].IgnorePat = LargePage->IgnorePat;
+        PageTable->PageEntry[ CurrentEntry ].SuppressVe = LargePage->SuppressVe;
+        PageTable->PageEntry[ CurrentEntry ].ReadAccess = 1;
+        PageTable->PageEntry[ CurrentEntry ].WriteAccess = 1;
+        PageTable->PageEntry[ CurrentEntry ].ExecuteAccess = 1;
+        PageTable->PageEntry[ CurrentEntry ].PageFrameNumber = ( PageTable->PhysicalBaseAddress + ( CurrentEntry << 12 ) ) >> 12;
+        HvTraceBasic( "PML1 decomposure %p\n", PageTable->PhysicalBaseAddress + ( CurrentEntry << 12 ) );
     }
 
-    PML2->Value = 0;
-    PML2->PageFrameNumber = HvGetPhysicalAddress( PageTable ) / 0x1000;
-    PML2->ReadAccess = 1;
-    PML2->WriteAccess = 1;
-    PML2->ExecuteAccess = 1;
+    LargePage->Long = 0;
+    LargePage->PageFrameNumber = HvGetPhysicalAddress( PageTable ) >> 12;
+    LargePage->ReadAccess = 1;
+    LargePage->WriteAccess = 1;
+    LargePage->ExecuteAccess = 1;
 
-    if (ProcessorState->TableHead == NULL) {
+    if ( ProcessorState->TableHead == NULL ) {
 
         InitializeListHead( &PageTable->TableLinks );
         ProcessorState->TableHead = &PageTable->TableLinks;
@@ -65,7 +61,7 @@ EptDecomposeLargeEntry(
     return PageTable;
 }
 
-PEPT_PML1
+PEPT_PML
 EptAddressPageEntry(
     __in PVMX_PROCESSOR_STATE   ProcessorState,
     __in ULONG64                PhysicalAddress
@@ -73,16 +69,16 @@ EptAddressPageEntry(
 {
     PLIST_ENTRY TableFlink;
 
-    PEPT_PML2_LARGE PML2Large;
+    PEPT_PML LargePage;
     PVMX_PAGE_TABLE PageTable;
 
-    PML2Large = &ProcessorState->PageTable->PML2Large[ PML3_INDEX( PhysicalAddress ) ][ PML2_INDEX( PhysicalAddress ) ];
+    LargePage = &ProcessorState->PageTable->Level2[ HvIndexLevel3( PhysicalAddress ) ][ HvIndexLevel2( PhysicalAddress ) ];
 
-    if (PML2Large->LargePage) {
+    if ( LargePage->LargePage ) {
 
-        PageTable = EptDecomposeLargeEntry( ProcessorState, PML2Large );
+        PageTable = EptDecomposeLargeLevel2( ProcessorState, LargePage );
         DbgBreakPoint( );
-        return &PageTable->PML1[ PML1_INDEX( PhysicalAddress ) ];
+        return &PageTable->PageEntry[ HvIndexLevel1( PhysicalAddress ) ];
     }
     else {
 
@@ -96,14 +92,14 @@ EptAddressPageEntry(
         do {
             PageTable = CONTAINING_RECORD( TableFlink, VMX_PAGE_TABLE, TableLinks );
 
-            if (PhysicalAddress >= PageTable->PhysicalBaseAddress &&
-                PhysicalAddress < PageTable->PhysicalBaseAddress + 0x200000) {
+            if ( PhysicalAddress >= PageTable->PhysicalBaseAddress &&
+                 PhysicalAddress < PageTable->PhysicalBaseAddress + 0x200000 ) {
 
-                return &PageTable->PML1[ PML1_INDEX( PhysicalAddress ) ];
+                return &PageTable->PageEntry[ HvIndexLevel1( PhysicalAddress ) ];
             }
 
             TableFlink = TableFlink->Flink;
-        } while (TableFlink != ProcessorState->TableHead);
+        } while ( TableFlink != ProcessorState->TableHead );
 
         //
         //  this is bad lol

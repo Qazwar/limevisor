@@ -3,11 +3,32 @@
 
 #include "hv.h"
 
+ULONG     g_VmPcbCount = 0;
+PVMX_PCB* g_VmPcbList = NULL;
+
+PVMX_PCB
+VmxCreateVmPcb(
+    __in ULONG ProcessorNumber
+)
+{
+
+    if ( g_VmPcbList == NULL ) {
+
+        g_VmPcbList = ( PVMX_PCB* )ExAllocatePoolWithTag( NonPagedPoolNx, sizeof( PVOID ) * KeNumberProcessors, ' XMV' );
+    }
+
+    g_VmPcbList[ g_VmPcbCount ] = ( PVMX_PCB )ExAllocatePoolWithTag( NonPagedPoolNx, sizeof( VMX_PCB ), ' XMV' );
+    g_VmPcbList[ g_VmPcbCount ]->Address = g_VmPcbList[ g_VmPcbCount ];
+    g_VmPcbList[ g_VmPcbCount ]->Number = ProcessorNumber;
+
+    return g_VmPcbList[ g_VmPcbCount++ ];
+}
+
 VOID
 VmxCopyControlDescriptor(
-    __in ULONG64                        SegmentSelector,
-    __in PSEGMENT_DESCRIPTOR_REGISTER   DescriptorTable,
-    __in PVMX_SEGMENT_DESCRIPTOR        Descriptor
+    __in ULONG64                      SegmentSelector,
+    __in PSEGMENT_DESCRIPTOR_REGISTER DescriptorTable,
+    __in PVMX_SEGMENT_DESCRIPTOR      Descriptor
 )
 {
     //
@@ -28,7 +49,7 @@ VmxCopyControlDescriptor(
 
     Selector = SegmentSelector & 0xF8;
 
-    if (Selector == 0 || ( Selector & 4 ) != 0) {
+    if ( Selector == 0 || ( Selector & 4 ) != 0 ) {
 
         Descriptor->AccessRights.Unusable = 1;
 
@@ -66,7 +87,7 @@ VmxCopyControlDescriptor(
     //  address value.
     //
 
-    if (SegmentDescriptor->DescriptorType == 0) {
+    if ( SegmentDescriptor->DescriptorType == 0 ) {
 
         Descriptor->SegmentBase |= ( ( ULONG64 )SegmentDescriptor->BaseAddressUpper << 32 );
     }
@@ -76,8 +97,8 @@ VmxCopyControlDescriptor(
 
 HVSTATUS
 VmxInitializeProcessorGuestControl(
-    __in PVMX_PROCESSOR_STATE       ProcessorState,
-    __in PVMX_PROCESSOR_DESCRIPTOR  ProcessorDescriptor
+    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 )
 {
     ProcessorState;
@@ -145,8 +166,8 @@ VmxInitializeProcessorGuestControl(
 
 HVSTATUS
 VmxInitializeProcessorHostControl(
-    __in PVMX_PROCESSOR_STATE       ProcessorState,
-    __in PVMX_PROCESSOR_DESCRIPTOR  ProcessorDescriptor
+    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 )
 {
     VMX_SEGMENT_DESCRIPTOR Descriptor;
@@ -176,7 +197,7 @@ VmxInitializeProcessorHostControl(
     __vmx_vmwrite( VMCS_HOST_TR_BASE, Descriptor.SegmentBase );
 
     __vmx_vmwrite( VMCS_HOST_FS_BASE, __readmsr( IA32_FS_BASE ) );
-    __vmx_vmwrite( VMCS_HOST_GS_BASE, __readmsr( IA32_GS_BASE ) );
+    __vmx_vmwrite( VMCS_HOST_GS_BASE, __readmsr( IA32_GS_BASE ) );//( size_t )VmxCreateVmPcb( KeGetCurrentProcessorNumber( ) ) );
 
     return HVSTATUS_SUCCESS;
 }
@@ -229,10 +250,28 @@ VmxInitializeProcessorControl(
 
     __vmx_vmwrite( VMCS_CTRL_MSR_BITMAP_ADDRESS, ProcessorState->BitmapMsrPhysical );
 
-    //__vmx_vmwrite( VMCS_CTRL_IO_BITMAP_A_ADDRESS, 0 );
-    //__vmx_vmwrite( VMCS_CTRL_IO_BITMAP_B_ADDRESS, 0 );
+    /*
+    24.6.3 Exception Bitmap
+        The exception bitmap is a 32-bit field that contains one bit for each exception. When an exception occurs, its
+        vector is used to select a bit in this field. If the bit is 1, the exception causes a VM exit. If the bit is 0, the exception
+        is delivered normally through the IDT, using the descriptor corresponding to the exception’s vector.
+        Whether a page fault (exception with vector 14) causes a VM exit is determined by bit 14 in the exception bitmap
+        as well as the error code produced by the page fault and two 32-bit fields in the VMCS (the page-fault error-code
+        mask and page-fault error-code match). See Section 25.2 for details.
 
-    //__vmx_vmwrite( VMCS_CTRL_EXCEPTION_BITMAP, 0 );
+    24.6.4 I/O-Bitmap Addresses
+        The VM-execution control fields include the 64-bit physical addresses of I/O bitmaps A and B (each of which are
+        4 KBytes in size). I/O bitmap A contains one bit for each I/O port in the range 0000H through 7FFFH; I/O bitmap B
+        contains bits for ports in the range 8000H through FFFFH.
+        A logical processor uses these bitmaps if and only if the “use I/O bitmaps” control is 1. If the bitmaps are used,
+        execution of an I/O instruction causes a VM exit if any bit in the I/O bitmaps corresponding to a port it accesses is
+        1. See Section 25.1.3 for details. If the bitmaps are used, their addresses must be 4-KByte aligned.
+    */
+
+    __vmx_vmwrite( VMCS_CTRL_IO_BITMAP_A_ADDRESS, 0 );
+    __vmx_vmwrite( VMCS_CTRL_IO_BITMAP_B_ADDRESS, 0 );
+
+    __vmx_vmwrite( VMCS_CTRL_EXCEPTION_BITMAP, 0 );
 
     __vmx_vmwrite( VMCS_CTRL_VMEXIT_CONTROLS, HvAdjustBitControl( VM_EXIT_IA32E_MODE, IA32_VMX_TRUE_EXIT_CTLS ) );
     __vmx_vmwrite( VMCS_CTRL_VMEXIT_MSR_STORE_COUNT, 0 );
@@ -243,9 +282,12 @@ VmxInitializeProcessorControl(
     __vmx_vmwrite( VMCS_CTRL_VMENTRY_INTERRUPTION_INFORMATION_FIELD, 0 );
     __vmx_vmwrite( VMCS_CTRL_VMENTRY_EXCEPTION_ERROR_CODE, 0 );
 
+    // If the logical processor is in VMX non-root operation and the “enable VPID” VM-execution control is 1, the
+    // current VPID is the value of the VPID VM - execution control field in the VMCS
+
     __vmx_vmwrite( VMCS_CTRL_VIRTUAL_PROCESSOR_IDENTIFIER, 1 );
 
-    __vmx_vmwrite( VMCS_CTRL_EPT_POINTER, ProcessorState->EptPointer.Value );
+    __vmx_vmwrite( VMCS_CTRL_EPT_POINTER, ProcessorState->EptPointer.Long );
 
     VmxInitializeProcessorHostControl( ProcessorState, &ProcessorDescriptor );
     VmxInitializeProcessorGuestControl( ProcessorState, &ProcessorDescriptor );

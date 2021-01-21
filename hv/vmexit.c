@@ -50,7 +50,7 @@ VmxHandleExit(
     ExitState.FinalStatus = HVSTATUS_SUCCESS;
     ExitState.IncrementIp = TRUE;
 
-    ProcessorState = &g_ProcessorState[ KeGetCurrentProcessorNumber( ) ];
+    ProcessorState = HvGetProcessorState( HvGetCurrentProcessorNumber( ) );
 
     __vmx_vmread( VMCS_EXIT_REASON, &ExitState.ExitReason );
     __vmx_vmread( VMCS_EXIT_QUALIFICATION, &ExitState.ExitQualification );
@@ -60,18 +60,19 @@ VmxHandleExit(
 
     ExitState.ExitReason &= 0xFFFF;
 
-    if (ExitState.ExitReason < VMX_EXIT_REASON_MAXIMUM) {
+    if ( ExitState.ExitReason < VMX_EXIT_REASON_MAXIMUM ) {
 
-        HvTraceBasic( "exit: %d\n", ExitState.ExitReason );
+        //HvTraceBasic( "exit: %d\n", ExitState.ExitReason );
+        //ExInterruptGuest( 3, VmxInterruptHardwareException, 0 );
         ExitState.FinalStatus = g_ExitHandlers[ ExitState.ExitReason ]( ProcessorState, TrapFrame, &ExitState );
     }
 
-    if (!HV_SUCCESS( ExitState.FinalStatus )) {
+    if ( !HV_SUCCESS( ExitState.FinalStatus ) ) {
 
         HvTraceBasic( "Reason: %#.8x caused vmxoff.\n", ExitState.ExitReason );
     }
 
-    if (ExitState.IncrementIp) {
+    if ( ExitState.IncrementIp ) {
 
         __vmx_vmread( VMCS_VMEXIT_INSTRUCTION_LENGTH, &ExitInstructionLength );
         ExitState.CurrentIp += ExitInstructionLength;

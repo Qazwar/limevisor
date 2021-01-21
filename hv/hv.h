@@ -16,53 +16,70 @@
 
 #include <intrin.h>
 
+#define HvBitRound( x, y )                   ( ( ( x ) + ( y ) - 1 ) & ~( ( y ) - 1 ) )
+
 #undef  RtlZeroMemory
 #define RtlZeroMemory( dst, size )           memset( ( void* )( dst ), 0, ( size_t )( size ) )
 
 #undef  C_ASSERT
-#define C_ASSERT( e )                       static_assert( e, "ASSERTION FAILURE" )
+#define C_ASSERT( e )                       static_assert( e, #e )
 
 #define EXTERN                              extern
 
-typedef ULONG32 HVSTATUS;
+typedef NTSTATUS HVSTATUS;
 
-#define HVSTATUS_SUCCESS                    ( ( HVSTATUS )0x00000000L )
-#define HVSTATUS_UNSUCCESSFUL               ( ( HVSTATUS )0x00000001L )
-#define HVSTATUS_UNSUPPORTED                ( ( HVSTATUS )0x00000002L )
+#define HVSTATUS_SUCCESS                    ( ( HVSTATUS )( ( FACILITY_HYPERVISOR << 16 ) | ( STATUS_SEVERITY_SUCCESS << 30 ) | ( 1 << 29 ) ) )
+#define HVSTATUS_UNSUCCESSFUL               ( ( HVSTATUS )( ( FACILITY_HYPERVISOR << 16 ) | ( STATUS_SEVERITY_ERROR << 30 ) | ( 1 << 29 ) | ( 1 ) ) )
+#define HVSTATUS_UNSUPPORTED                ( ( HVSTATUS )( ( FACILITY_HYPERVISOR << 16 ) | ( STATUS_SEVERITY_ERROR << 30 ) | ( 1 << 29 ) | ( 2 ) ) )
 
-#define HV_SUCCESS( status )                ( ( ( HVSTATUS )( status ) ) == ( HVSTATUS_SUCCESS ) )
+#define HV_SUCCESS                          NT_SUCCESS
+
+typedef struct _PHYSICAL_REGION_DESCRIPTOR  *PPHYSICAL_REGION_DESCRIPTOR;
 
 typedef struct _VMX_EXIT_TRAP_FRAME         *PVMX_EXIT_TRAP_FRAME;
 typedef struct _VMX_SEGMENT_DESCRIPTOR      *PVMX_SEGMENT_DESCRIPTOR;
-typedef struct _PHYSICAL_REGION_DESCRIPTOR  *PPHYSICAL_REGION_DESCRIPTOR;
 typedef struct _VMX_PAGE_TABLE_BASE         *PVMX_PAGE_TABLE_BASE;
 typedef struct _VMX_PAGE_TABLE              *PVMX_PAGE_TABLE;
 typedef struct _VMX_PROCESSOR_STATE         *PVMX_PROCESSOR_STATE;
 typedef struct _VMX_EXIT_STATE              *PVMX_EXIT_STATE;
+typedef struct _VMX_PCB                     *PVMX_PCB;
 typedef HVSTATUS( *PVMX_EXIT_HANDLER )(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PVMX_EXIT_TRAP_FRAME   TrapFrame,
-    __in PVMX_EXIT_STATE        ExitState
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_EXIT_TRAP_FRAME TrapFrame,
+    __in PVMX_EXIT_STATE      ExitState
     );
 
-typedef union _VMX_EXIT_QUALIFICATION_MOV_CR    *PVMX_EXIT_QUALIFICATION_MOV_CR;
+typedef union _VMX_EQ_ACCESS_CONTROL        *PVMX_EQ_ACCESS_CONTROL;
+typedef union _VMX_EQ_EPT_VIOLATION         *PVMX_EQ_EPT_VIOLATION;
+typedef union _EPT_PML                      *PEPT_PML;
 
-typedef union _EPT_POINTER                  *PEPT_POINTER;
-typedef union _EPT_PML4                     *PEPT_PML4;
-typedef union _EPT_PML3                     *PEPT_PML3;
-typedef union _EPT_PML3_LARGE               *PEPT_PML3_LARGE;
-typedef union _EPT_PML2                     *PEPT_PML2;
-typedef union _EPT_PML2_LARGE               *PEPT_PML2_LARGE;
-typedef union _EPT_PML1                     *PEPT_PML1;
 
 #include "ept.h"
 #include "vmx.h"
 #include "mp.h"
 #include "ex.h"
 
+PFORCEINLINE
+PVMX_PCB
+HvGetCurrentPcb(
+
+)
+{
+    return ( PVMX_PCB )__readgsqword( 0 );
+}
+
+PFORCEINLINE
+ULONG
+HvGetCurrentProcessorNumber(
+
+)
+{
+    return KeGetCurrentProcessorNumber( );//HvGetCurrentPcb( )->Number;
+}
+
 EXTERN PVMX_PROCESSOR_STATE g_ProcessorState;
 
-#define HvTraceBasic( _, ... )              DbgPrint( "[Limevisor] " _, __VA_ARGS__ )
+#define HvTraceBasic( _, ... )              DbgPrintEx( DPFLTR_IHVDRIVER_ID, 0, "[Limevisor] " _, __VA_ARGS__ )
 
 #define HvGetThreadContext                  __readcr3
 #define HvSetThreadContext                  __writecr3
@@ -75,7 +92,7 @@ HvGetVirtualAddress(
 {
 
     //
-    //  Shut the fuck up.
+    // Shut the fuck up, there is enough address space to waste. (fix tho)
     //
 
     return MmMapIoSpace( *( PPHYSICAL_ADDRESS )&Address, 0x1000, MmNonCached );
@@ -94,11 +111,12 @@ HvGetPhysicalAddress(
 PFORCEINLINE
 PVMX_PROCESSOR_STATE
 HvGetProcessorState(
-
+    __in ULONG ProcessorNumber
 )
 {
-
-    return &g_ProcessorState[ KeGetCurrentProcessorNumber( ) ];
+    //HvGetCurrentPcb( )->Number
+    //KeGetCurrentProcessorNumber( );
+    return &g_ProcessorState[ ProcessorNumber ];
 }
 
 PFORCEINLINE
@@ -128,11 +146,11 @@ HvTerminateVisor(
 
 NTSTATUS
 HvDriverEntry(
-    __in PDRIVER_OBJECT     DriverObject,
-    __in PUNICODE_STRING    RegistryPath
+    __in PDRIVER_OBJECT  DriverObject,
+    __in PUNICODE_STRING RegistryPath
 );
 
 VOID
 HvDriverUnload(
-    __in PDRIVER_OBJECT     DriverObject
+    __in PDRIVER_OBJECT  DriverObject
 );

@@ -5,16 +5,16 @@
 
 HVSTATUS
 ExHandleEptMisconfig(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PVMX_EXIT_TRAP_FRAME   TrapFrame,
-    __in PVMX_EXIT_STATE        ExitState
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_EXIT_TRAP_FRAME TrapFrame,
+    __in PVMX_EXIT_STATE      ExitState
 )
 {
     ProcessorState;
     TrapFrame;
     ExitState;
 
-    HvTraceBasic( "EPT misconfig, terminating processor%d\n", KeGetCurrentProcessorNumber( ) );
+    HvTraceBasic( "EPT misconfig, terminating processor%d\n", HvGetCurrentProcessorNumber( ) );
     DbgBreakPoint( );
 
     return HVSTATUS_UNSUCCESSFUL;
@@ -22,9 +22,9 @@ ExHandleEptMisconfig(
 
 HVSTATUS
 ExHandleHardFault(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PVMX_EXIT_TRAP_FRAME   TrapFrame,
-    __in PVMX_EXIT_STATE        ExitState
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_EXIT_TRAP_FRAME TrapFrame,
+    __in PVMX_EXIT_STATE      ExitState
 )
 {
     ProcessorState;

@@ -22,9 +22,9 @@ HvCheckProcessorSupport(
     //  we only support intel vt-x
     //
 
-    if (IdRegisters[ 1 ] != 'uneG' ||
-        IdRegisters[ 3 ] != 'Ieni' ||
-        IdRegisters[ 2 ] != 'letn') {
+    if ( IdRegisters[ 1 ] != 'uneG' ||
+         IdRegisters[ 3 ] != 'Ieni' ||
+         IdRegisters[ 2 ] != 'letn' ) {
 
         HvTraceBasic( "CPU vendor unsupported.\n" );
 
@@ -37,7 +37,7 @@ HvCheckProcessorSupport(
     //  VMX feature present bit.
     //
 
-    if (( IdRegisters[ 2 ] & ( 1 << 5 ) ) == 0) {
+    if ( ( IdRegisters[ 2 ] & ( 1 << 5 ) ) == 0 ) {
 
         return HVSTATUS_UNSUPPORTED;
     }
@@ -49,7 +49,7 @@ HvCheckProcessorSupport(
     //  set the vmx bit and lock bit.
     //
 
-    if (( FeatureControl & ( 1 << 0 ) ) == 0) {
+    if ( ( FeatureControl & ( 1 << 0 ) ) == 0 ) {
 
         FeatureControl |= ( 1 << 0 );   //Lock
         FeatureControl |= ( 1 << 2 );   //VMX
@@ -61,7 +61,7 @@ HvCheckProcessorSupport(
     //  some options in place, check if vmx is enabled.
     //
 
-    else if (( FeatureControl & ( 1 << 2 ) ) == 0) {
+    else if ( ( FeatureControl & ( 1 << 2 ) ) == 0 ) {
 
         return HVSTATUS_UNSUPPORTED;
     }
@@ -73,9 +73,9 @@ HvCheckProcessorSupport(
     //  ept memory type writeback and large PML2s
     //
 
-    if (( VpidCapabilities & ( 1 << 6 ) ) == 0 ||
+    if ( ( VpidCapabilities & ( 1 << 6 ) ) == 0 ||
         ( VpidCapabilities & ( 1 << 16 ) ) == 0 ||
-        ( VpidCapabilities & ( 1 << 14 ) ) == 0) {
+         ( VpidCapabilities & ( 1 << 14 ) ) == 0 ) {
 
         return HVSTATUS_UNSUPPORTED;
     }
@@ -87,7 +87,7 @@ HvCheckProcessorSupport(
     //  using these to get a memory map.
     //
 
-    if (( MtrrDefType & ( 1 << 11 ) ) == 0) {
+    if ( ( MtrrDefType & ( 1 << 11 ) ) == 0 ) {
 
         return HVSTATUS_UNSUPPORTED;
     }
@@ -118,7 +118,7 @@ HvInitializeProcessorStates(
     g_ProcessorState = ExAllocatePoolWithTag( NonPagedPoolNx, StatePoolSize, ' UPC' );
     RtlZeroMemory( g_ProcessorState, StatePoolSize );
 
-    for (ULONG32 CurrentProcessor = 0; CurrentProcessor < ProcessorCount; CurrentProcessor++) {
+    for ( ULONG32 CurrentProcessor = 0; CurrentProcessor < ProcessorCount; CurrentProcessor++ ) {
 
         g_ProcessorState[ CurrentProcessor ].OnRegion = ( ULONG64 )MmAllocateContiguousMemory( 0x2000, HighestPhysical );
         g_ProcessorState[ CurrentProcessor ].OnRegionPhysical = HvGetPhysicalAddress( ( PVOID )g_ProcessorState[ CurrentProcessor ].OnRegion );
@@ -131,6 +131,25 @@ HvInitializeProcessorStates(
         g_ProcessorState[ CurrentProcessor ].BitmapMsr = ( ULONG64 )ExAllocatePoolWithTag( NonPagedPool, 0x1000, ' PMB' );
         g_ProcessorState[ CurrentProcessor ].BitmapMsrPhysical = ( ULONG64 )HvGetPhysicalAddress( ( PVOID )g_ProcessorState[ CurrentProcessor ].BitmapMsr );
         RtlZeroMemory( g_ProcessorState[ CurrentProcessor ].BitmapMsr, 0x1000 );
+
+        /*
+            • Read bitmap for low MSRs (located at the MSR-bitmap address). This contains one bit for each MSR address
+                in the range 00000000H to 00001FFFH. The bit determines whether an execution of RDMSR applied to that
+                MSR causes a VM exit.
+            • Read bitmap for high MSRs (located at the MSR-bitmap address plus 1024). This contains one bit for each
+                MSR address in the range C0000000H toC0001FFFH. The bit determines whether an execution of RDMSR
+                applied to that MSR causes a VM exit.
+            • Write bitmap for low MSRs (located at the MSR-bitmap address plus 2048). This contains one bit for each
+                MSR address in the range 00000000H to 00001FFFH. The bit determines whether an execution of WRMSR
+                applied to that MSR causes a VM exit.
+            • Write bitmap for high MSRs (located at the MSR-bitmap address plus 3072). This contains one bit for each
+                MSR address in the range C0000000H toC0001FFFH. The bit determines whether an execution of WRMSR
+                applied to that MSR causes a VM exit.
+        */
+
+        // vmexit of IA32_FEATURE_CONTROL access.
+        *( ULONG64* )( g_ProcessorState[ CurrentProcessor ].BitmapMsr + ( IA32_FEATURE_CONTROL / 64 ) ) |= 1ULL << ( IA32_FEATURE_CONTROL % 64 );
+        *( ULONG64* )( g_ProcessorState[ CurrentProcessor ].BitmapMsr + ( IA32_FEATURE_CONTROL / 64 ) + 2048 ) |= 1ULL << ( IA32_FEATURE_CONTROL % 64 );
 
         g_ProcessorState[ CurrentProcessor ].HostStackSize = 0x2000;
         g_ProcessorState[ CurrentProcessor ].HostStack = ( ULONG64 )ExAllocatePoolWithTag( NonPagedPool, g_ProcessorState[ CurrentProcessor ].HostStackSize, ' KTS' );
@@ -155,10 +174,10 @@ HvInitializeProcessor(
     HVSTATUS hvStatus;
     PVMX_PROCESSOR_STATE ProcessorState;
 
-    ProcessorState = HvGetProcessorState( );
+    ProcessorState = HvGetProcessorState( KeGetCurrentProcessorNumber( ) );
 
     hvStatus = VmxInitializeProcessor( ProcessorState );
-    if (!HV_SUCCESS( hvStatus )) {
+    if ( !HV_SUCCESS( hvStatus ) ) {
 
         return hvStatus;
     }
@@ -174,7 +193,7 @@ HvTerminateProcessor(
     HVSTATUS hvStatus;
     PVMX_PROCESSOR_STATE ProcessorState;
 
-    ProcessorState = HvGetProcessorState( );
+    ProcessorState = HvGetProcessorState( KeGetCurrentProcessorNumber( ) );
 
     hvStatus = VmxTerminateProcessor( ProcessorState );
 
@@ -196,13 +215,13 @@ HvInitializeVisor(
     HVSTATUS hvStatus;
 
     hvStatus = HvCheckProcessorSupport( );
-    if (!HV_SUCCESS( hvStatus )) {
+    if ( !HV_SUCCESS( hvStatus ) ) {
 
         return hvStatus;
     }
 
     hvStatus = HvInitializeProcessorStates( );
-    if (!HV_SUCCESS( hvStatus )) {
+    if ( !HV_SUCCESS( hvStatus ) ) {
 
         return hvStatus;
     }
@@ -213,22 +232,22 @@ HvInitializeVisor(
     //  pointer to ExHandleUnimplemented.
     //
 
-    for (ULONG64 ExitHandler = 0; ExitHandler < VMX_EXIT_REASON_MAXIMUM; ExitHandler++) {
+    for ( ULONG64 ExitHandler = 0; ExitHandler < VMX_EXIT_REASON_MAXIMUM; ExitHandler++ ) {
 
-        if (g_ExitHandlers[ ExitHandler ] == NULL) {
+        if ( g_ExitHandlers[ ExitHandler ] == NULL ) {
 
             g_ExitHandlers[ ExitHandler ] = ExHandleUnimplemented;
         }
     }
 
     hvStatus = EptInitialize( );
-    if (!HV_SUCCESS( hvStatus )) {
+    if ( !HV_SUCCESS( hvStatus ) ) {
 
         return hvStatus;
     }
 
     hvStatus = MpProcessorExecute( ( PMP_PROCEDURE )&HvInitializeProcessor, NULL );
-    if (!HV_SUCCESS( hvStatus )) {
+    if ( !HV_SUCCESS( hvStatus ) ) {
 
         MpProcessorExecute( ( PMP_PROCEDURE )&HvTerminateProcessor, NULL );
         return hvStatus;
@@ -243,7 +262,6 @@ HvTerminateVisor(
 )
 {
     HVSTATUS hvStatus;
-    PVMX_PROCESSOR_STATE ProcessorState;
     ULONG32 ProcessorCount;
 
     //
@@ -254,10 +272,9 @@ HvTerminateVisor(
 
     hvStatus = MpProcessorExecute( ( PMP_PROCEDURE )HvTerminateProcessor, NULL );
 
-    ProcessorState = HvGetProcessorState( );
     ProcessorCount = KeQueryActiveProcessorCount( 0 );
 
-    for (ULONG32 CurrentProcessor = 0; CurrentProcessor < ProcessorCount; CurrentProcessor++) {
+    for ( ULONG32 CurrentProcessor = 0; CurrentProcessor < ProcessorCount; CurrentProcessor++ ) {
 
         MmFreeContiguousMemory( ( PVOID )g_ProcessorState[ CurrentProcessor ].OnRegion );
         MmFreeContiguousMemory( ( PVOID )g_ProcessorState[ CurrentProcessor ].ControlRegion );

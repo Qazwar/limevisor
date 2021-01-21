@@ -12,7 +12,7 @@ EptInitialize(
 )
 {
 
-    EptInitializePhysicalMap( );
+    EptBuildMap( );
 
     return HVSTATUS_SUCCESS;
 }
@@ -28,7 +28,7 @@ EptInitializeProcessor(
     //  irql = dispatch_level
     //
 
-    if (ProcessorState != &g_ProcessorState[ 0 ]) {
+    if ( ProcessorState != &g_ProcessorState[ 0 ] ) {
 
         ProcessorState->EptPointer = g_ProcessorState[ 0 ].EptPointer;
         ProcessorState->PageTable = g_ProcessorState[ 0 ].PageTable;
@@ -36,7 +36,7 @@ EptInitializeProcessor(
         return HVSTATUS_SUCCESS;
     }
 
-    EPT_POINTER EPT;
+    EPT_POINTER Ept;
 
     ULONG64 Index3;
     ULONG64 Index2;
@@ -45,50 +45,51 @@ EptInitializeProcessor(
     ULONG64 MemoryMappingMax;
     ULONG64 CurrentRange;
 
-    PHYSICAL_ADDRESS Max = { ~0ULL };
+    //PHYSICAL_ADDRESS Max = { ~0ULL };
 
     ProcessorState->HookHead = NULL;
     ProcessorState->TableHead = NULL;
 
-    ProcessorState->PageTable = MmAllocateContiguousMemory( sizeof( VMX_PAGE_TABLE_BASE ), Max );//ExAllocatePoolWithTag( NonPagedPool, sizeof( VMX_PAGE_TABLE_BASE ), 'EGAP' );
+    ProcessorState->PageTable = ExAllocatePoolWithTag( NonPagedPool, sizeof( VMX_PAGE_TABLE_BASE ), 'EGAP' );
     RtlZeroMemory( ProcessorState->PageTable, sizeof( VMX_PAGE_TABLE_BASE ) );
 
-    ProcessorState->PageTable->PML4[ 0 ].PageFrameNumber = HvGetPhysicalAddress( ProcessorState->PageTable->PML3 ) / 0x1000;
-    ProcessorState->PageTable->PML4[ 0 ].ReadAccess = 1;
-    ProcessorState->PageTable->PML4[ 0 ].WriteAccess = 1;
-    ProcessorState->PageTable->PML4[ 0 ].ExecuteAccess = 1;
+    ProcessorState->PageTable->Level4[ 0 ].PageFrameNumber = HvGetPhysicalAddress( ProcessorState->PageTable->Level3 ) >> 12;
+    ProcessorState->PageTable->Level4[ 0 ].ReadAccess = 1;
+    ProcessorState->PageTable->Level4[ 0 ].WriteAccess = 1;
+    ProcessorState->PageTable->Level4[ 0 ].ExecuteAccess = 1;
 
 
-    for (Index3 = 0; Index3 < 512; Index3++) {
+    for ( Index3 = 0; Index3 < 512; Index3++ ) {
 
-        ProcessorState->PageTable->PML3[ Index3 ].ReadAccess = 1;
-        ProcessorState->PageTable->PML3[ Index3 ].WriteAccess = 1;
-        ProcessorState->PageTable->PML3[ Index3 ].ExecuteAccess = 1;
-        ProcessorState->PageTable->PML3[ Index3 ].PageFrameNumber = HvGetPhysicalAddress( &ProcessorState->PageTable->PML2[ Index3 ] ) / 0x1000;
+        ProcessorState->PageTable->Level3[ Index3 ].ReadAccess = 1;
+        ProcessorState->PageTable->Level3[ Index3 ].WriteAccess = 1;
+        ProcessorState->PageTable->Level3[ Index3 ].ExecuteAccess = 1;
+        ProcessorState->PageTable->Level3[ Index3 ].PageFrameNumber = HvGetPhysicalAddress( &ProcessorState->PageTable->Level2[ Index3 ] ) >> 12;
     }
 
-    for (CurrentRange = 0; CurrentRange < g_EptRangeDescriptorsCount; CurrentRange++) {
+    for ( CurrentRange = 0; CurrentRange < g_EptRangeDescriptorsCount; CurrentRange++ ) {
 
         MemoryMappingCount = 0;
-        MemoryMappingMax = ( g_EptRangeDescriptors[ CurrentRange ].RegionLength + 0x1FFFFF ) & ( -0x200000 );
+        MemoryMappingMax = HvBitRound( g_EptRangeDescriptors[ CurrentRange ].RegionLength, 0x200000 );
+        //( g_EptRangeDescriptors[ CurrentRange ].RegionLength + 0x1FFFFF ) & ( -0x200000 );
 
-        while (MemoryMappingCount < MemoryMappingMax) {
+        while ( MemoryMappingCount < MemoryMappingMax ) {
 
-            Index3 = PML3_INDEX(
+            Index3 = HvIndexLevel3(
                 g_EptRangeDescriptors[ CurrentRange ].RegionBase +
                 MemoryMappingCount );
-            Index2 = PML2_INDEX(
+            Index2 = HvIndexLevel2(
                 g_EptRangeDescriptors[ CurrentRange ].RegionBase +
                 MemoryMappingCount );
 
-            ProcessorState->PageTable->PML2Large[ Index3 ][ Index2 ].MemoryType = g_EptRangeDescriptors[ CurrentRange ].RegionType;
-            ProcessorState->PageTable->PML2Large[ Index3 ][ Index2 ].ReadAccess = 1;
-            ProcessorState->PageTable->PML2Large[ Index3 ][ Index2 ].WriteAccess = 1;
-            ProcessorState->PageTable->PML2Large[ Index3 ][ Index2 ].ExecuteAccess = 1;
-            ProcessorState->PageTable->PML2Large[ Index3 ][ Index2 ].LargePage = 1;
-            ProcessorState->PageTable->PML2Large[ Index3 ][ Index2 ].PageFrameNumber = (
+            ProcessorState->PageTable->Level2[ Index3 ][ Index2 ].MemoryType = g_EptRangeDescriptors[ CurrentRange ].RegionType;
+            ProcessorState->PageTable->Level2[ Index3 ][ Index2 ].ReadAccess = 1;
+            ProcessorState->PageTable->Level2[ Index3 ][ Index2 ].WriteAccess = 1;
+            ProcessorState->PageTable->Level2[ Index3 ][ Index2 ].ExecuteAccess = 1;
+            ProcessorState->PageTable->Level2[ Index3 ][ Index2 ].LargePage = 1;
+            ProcessorState->PageTable->Level2[ Index3 ][ Index2 ].PageFrameNumber = (
                 g_EptRangeDescriptors[ CurrentRange ].RegionBase +
-                MemoryMappingCount ) / 0x200000;
+                MemoryMappingCount ) >> 12;
 
             //DbgPrint( "Mapping %p %d %d\n", g_EptRangeDescriptors[ CurrentRange ].RegionBase + MemoryMappingCount, Index3, Index2 );
 
@@ -97,15 +98,13 @@ EptInitializeProcessor(
 
     }
 
-    EPT.Value = 0;
-    EPT.PageFrameNumber = HvGetPhysicalAddress( ProcessorState->PageTable->PML4 ) / 0x1000;
-    EPT.PageWalkLength = 3;
-    EPT.EnableAccessAndDirtyFlags = FALSE;
-    EPT.MemoryType = MEMORY_TYPE_WRITE_BACK;
+    Ept.Long = 0;
+    Ept.PageFrameNumber = HvGetPhysicalAddress( ProcessorState->PageTable->Level4 ) >> 12;
+    Ept.PageWalkLength = 3;
+    Ept.EnableAccessAndDirtyFlags = FALSE;
+    Ept.MemoryType = MEMORY_TYPE_WRITE_BACK;
 
-    ProcessorState->EptPointer = EPT;
-
-    EptAddressPageEntry( ProcessorState, 0x60ec1000 );
+    ProcessorState->EptPointer = Ept;
 
     return HVSTATUS_SUCCESS;
 }
@@ -115,16 +114,23 @@ EptTerminateProcessor(
     __in PVMX_PROCESSOR_STATE ProcessorState
 )
 {
+    if ( ProcessorState != &g_ProcessorState[ KeQueryActiveProcessorCount( 0 ) - 1 ] ) {
+
+        return HVSTATUS_SUCCESS;
+    }
+
+    ProcessorState;
     PLIST_ENTRY Flink;
+    Flink;
 
     ExFreePoolWithTag( ProcessorState->PageTable, 'EGAP' );
 
-    if (ProcessorState->HookHead != NULL) {
+    if ( ProcessorState->HookHead != NULL ) {
 
         Flink;
     }
 
-    if (ProcessorState->TableHead != NULL) {
+    if ( ProcessorState->TableHead != NULL ) {
 
 
     }
@@ -133,7 +139,7 @@ EptTerminateProcessor(
 }
 
 VOID
-EptInitializePhysicalMap(
+EptBuildMap(
 
 )
 {
@@ -149,7 +155,7 @@ EptInitializePhysicalMap(
 
     MtrrCapabilities = __readmsr( IA32_MTRR_CAPABILITIES );
 
-    for (CurrentRegister = 0; CurrentRegister < ( ( ULONG64 )( UCHAR )MtrrCapabilities ); CurrentRegister++) {
+    for ( CurrentRegister = 0; CurrentRegister < ( ( ULONG64 )( UCHAR )MtrrCapabilities ); CurrentRegister++ ) {
 
         PhysicalBase = __readmsr( ( ULONG32 )( IA32_MTRR_PHYSBASE0 + CurrentRegister * 2 ) );
         PhysicalMask = __readmsr( ( ULONG32 )( IA32_MTRR_PHYSMASK0 + CurrentRegister * 2 ) );
@@ -158,7 +164,7 @@ EptInitializePhysicalMap(
         //  check valid bit.
         //
 
-        if (PhysicalMask & ( 1 << 11 )) {
+        if ( PhysicalMask & ( 1 << 11 ) ) {
 
             CurrentDescriptor = &g_EptRangeDescriptors[ g_EptRangeDescriptorsCount++ ];
             CurrentDescriptor->RegionBase = PhysicalBase & 0xFFFFFFFFF000;
@@ -169,10 +175,10 @@ EptInitializePhysicalMap(
             CurrentDescriptor->RegionType = ( ULONG64 )( UCHAR )PhysicalBase;
 
             HvTraceBasic( "MTRR Range: %p %p %p %x\n",
-                CurrentDescriptor->RegionBase,
-                CurrentDescriptor->RegionBase + CurrentDescriptor->RegionLength,
-                CurrentDescriptor->RegionLength,
-                CurrentDescriptor->RegionType );
+                          CurrentDescriptor->RegionBase,
+                          CurrentDescriptor->RegionBase + CurrentDescriptor->RegionLength,
+                          CurrentDescriptor->RegionLength,
+                          CurrentDescriptor->RegionType );
         }
     }
 

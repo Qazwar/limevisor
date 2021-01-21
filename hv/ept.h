@@ -13,115 +13,17 @@ typedef union _EPT_POINTER {
         ULONG64 Reserved2 : 16;
     };
 
-    ULONG64 Value;
+    ULONG64     Long;
 } EPT_POINTER, *PEPT_POINTER;
 
-typedef union _EPT_PML4 {
-    struct {
-        ULONG64 ReadAccess : 1;
-        ULONG64 WriteAccess : 1;
-        ULONG64 ExecuteAccess : 1;
-        ULONG64 Reserved1 : 5;
-        ULONG64 Accessed : 1;
-        ULONG64 Reserved2 : 1;
-        ULONG64 UserModeExecute : 1;
-        ULONG64 Reserved3 : 1;
-        ULONG64 PageFrameNumber : 36;
-        ULONG64 Reserved4 : 16;
-    };
-
-    ULONG64 Value;
-} EPT_PML4, *PEPT_PML4;
-
-typedef union _EPT_PML3_LARGE {
+typedef union _EPT_PML {
     struct {
         ULONG64 ReadAccess : 1;
         ULONG64 WriteAccess : 1;
         ULONG64 ExecuteAccess : 1;
         ULONG64 MemoryType : 3;
         ULONG64 IgnorePat : 1;
-        ULONG64 LargePage : 1; // 1 = EPT_PML3_LARGE, 0 = EPT_PML3
-        ULONG64 Accessed : 1;
-        ULONG64 Dirty : 1;
-        ULONG64 UserModeExecute : 1;
-        ULONG64 Reserved1 : 19;
-        ULONG64 PageFrameNumber : 18;
-        ULONG64 Reserved2 : 15;
-        ULONG64 SuppressVe : 1;
-    };
-
-    ULONG64 Value;
-} EPT_PML3_LARGE, *PEPT_PML3_LARGE;
-
-typedef union _EPT_PML3 {
-    struct {
-        ULONG64 ReadAccess : 1;
-        ULONG64 WriteAccess : 1;
-        ULONG64 ExecuteAccess : 1;
-        ULONG64 Reserved1 : 4;
-        ULONG64 LargePage : 1; // 1 = EPT_PML3_LARGE, 0 = EPT_PML3
-        ULONG64 Accessed : 1;
-        ULONG64 Reserved2 : 1;
-        ULONG64 UserModeExecute : 1;
-        ULONG64 Reserved3 : 1;
-        ULONG64 PageFrameNumber : 36;
-        ULONG64 Reserved4 : 16;
-    };
-
-    ULONG64 Value;
-} EPT_PML3, *PEPT_PML3;
-
-typedef union _EPT_PML2_LARGE {
-    struct {
-        ULONG64 ReadAccess : 1;
-        ULONG64 WriteAccess : 1;
-        ULONG64 ExecuteAccess : 1;
-        ULONG64 MemoryType : 3;
-        ULONG64 IgnorePat : 1;
-        ULONG64 LargePage : 1; // 1 = EPT_PML2_LARGE, 0 = EPT_PML2
-        ULONG64 Accessed : 1;
-        ULONG64 Dirty : 1;
-        ULONG64 UserModeExecute : 1;
-        ULONG64 Reserved1 : 10;
-        ULONG64 PageFrameNumber : 27;
-        ULONG64 Reserved2 : 15;
-        ULONG64 SuppressVe : 1;
-    };
-
-    ULONG64 Value;
-} EPT_PML2_LARGE, *PEPT_PML2_LARGE;
-
-//
-//  TODO:   consider merging LARGE structures and
-//          non large structures using a union.
-//
-
-typedef union _EPT_PML2 {
-    struct {
-        ULONG64 ReadAccess : 1;
-        ULONG64 WriteAccess : 1;
-        ULONG64 ExecuteAccess : 1;
-        ULONG64 Reserved1 : 4;
-        ULONG64 LargePage : 1; // 1 = EPT_PML2_LARGE, 0 = EPT_PML2
-        ULONG64 Accessed : 1;
-        ULONG64 Reserved2 : 1;
-        ULONG64 UserModeExecute : 1;
-        ULONG64 Reserved3 : 1;
-        ULONG64 PageFrameNumber : 36;
-        ULONG64 Reserved4 : 16;
-    };
-
-    ULONG64 Value;
-} EPT_PML2, *PEPT_PML2;
-
-typedef union _EPT_PML1 {
-    struct {
-        ULONG64 ReadAccess : 1;
-        ULONG64 WriteAccess : 1;
-        ULONG64 ExecuteAccess : 1;
-        ULONG64 MemoryType : 3;
-        ULONG64 IgnorePat : 1;
-        ULONG64 Reserved1 : 1;
+        ULONG64 LargePage : 1;
         ULONG64 Accessed : 1;
         ULONG64 Dirty : 1;
         ULONG64 UserModeExecute : 1;
@@ -131,20 +33,22 @@ typedef union _EPT_PML1 {
         ULONG64 SuppressVe : 1;
     };
 
-    ULONG64 Value;
-} EPT_PML1, *PEPT_PML1;
+    ULONG64     Long;
+} EPT_PML, *PEPT_PML;
 
-C_ASSERT( sizeof( EPT_PML4 ) == 8 );
-C_ASSERT( sizeof( EPT_PML3 ) == 8 );
-C_ASSERT( sizeof( EPT_PML3_LARGE ) == 8 );
-C_ASSERT( sizeof( EPT_PML2 ) == 8 );
-C_ASSERT( sizeof( EPT_PML2_LARGE ) == 8 );
-C_ASSERT( sizeof( EPT_PML1 ) == 8 );
+C_ASSERT( sizeof( EPT_PML ) == 8 );
 
-#define PML4_INDEX( address ) ( ( ( address ) & 0xFF8000000000ULL )  >> 39 )
-#define PML3_INDEX( address ) ( ( ( address ) & 0x7FC0000000ULL )  >> 30 )
-#define PML2_INDEX( address ) ( ( ( address ) & 0x3FE00000ULL )  >> 21 )
-#define PML1_INDEX( address ) ( ( ( address ) & 0x1FF000ULL )  >> 12 )
+#define HvIndexLevel4( address )                ( ( ( ULONG64 ) ( address ) & ( 0x1FFULL << 39ULL ) ) >> 39ULL )
+#define HvIndexLevel3( address )                ( ( ( ULONG64 ) ( address ) & ( 0x1FFULL << 30ULL ) ) >> 30ULL )
+#define HvIndexLevel2( address )                ( ( ( ULONG64 ) ( address ) & ( 0x1FFULL << 21ULL ) ) >> 21ULL )
+#define HvIndexLevel1( address )                ( ( ( ULONG64 ) ( address ) & ( 0x1FFULL << 12ULL ) ) >> 12ULL )
+
+#define HvConstructAddress( index4, index3, index2, index1 ) \
+( ( PVOID )( ( ( ULONG64 )( index4 ) << 39ULL ) |\
+( ( ULONG64 )( index3 ) << 30ULL ) |\
+( ( ULONG64 )( index2 ) << 21ULL ) |\
+( ( ULONG64 )( index1 ) << 12ULL ) |\
+( ( ( ULONG64 )( index4 ) / 256 ) * 0xFFFF000000000000 ) ) )
 
 #define MEMORY_TYPE_UNCACHEABLE                                      0x00000000
 #define MEMORY_TYPE_WRITE_COMBINING                                  0x00000001
@@ -155,7 +59,7 @@ C_ASSERT( sizeof( EPT_PML1 ) == 8 );
 
 #define EPT_POOL_TAG ' TPE'
 
-typedef union _VMX_EXIT_QUALIFICATION_EPT_VIOLATION {
+typedef union _VMX_EQ_EPT_VIOLATION {
     struct {
         ULONG64 ReadAccess : 1;
         ULONG64 WriteAccess : 1;
@@ -173,8 +77,8 @@ typedef union _VMX_EXIT_QUALIFICATION_EPT_VIOLATION {
         ULONG64 Reserved1 : 51;
     };
 
-    ULONG64 Value;
-} VMX_EXIT_QUALIFICATION_EPT_VIOLATION, *PVMX_EXIT_QUALIFICATION_EPT_VIOLATION;
+    ULONG64 Long;
+} VMX_EQ_EPT_VIOLATION, *PVMX_EQ_EPT_VIOLATION;
 
 #pragma push(pack, 8)
 typedef struct _VMX_PAGE_HOOK {
@@ -204,7 +108,7 @@ typedef struct _VMX_PAGE_HOOK {
 
         ULONG64     PageOriginal;
         ULONG64     PageHook;
-        PEPT_PML1   PML1;
+        PEPT_PML    PageEntry;
 
     } PagePhysical[ 0 ];
 
@@ -217,7 +121,7 @@ EptInitialize(
 );
 
 VOID
-EptInitializePhysicalMap(
+EptBuildMap(
 
 );
 
@@ -233,29 +137,27 @@ EptTerminateProcessor(
 
 HVSTATUS
 EptViolationFault(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PVMX_EXIT_TRAP_FRAME   TrapFrame,
-    __in PVMX_EXIT_STATE        ExitState
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_EXIT_TRAP_FRAME TrapFrame,
+    __in PVMX_EXIT_STATE      ExitState
 );
 
-PEPT_PML1
+PEPT_PML
 EptAddressPageEntry(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in ULONG64                PhysicalAddress
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in ULONG64              PhysicalAddress
 );
 
 HVSTATUS
 EptPageHookFault(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PVMX_EXIT_TRAP_FRAME   TrapFrame,
-    __in PVMX_EXIT_STATE        ExitState,
-    __in ULONG64                AddressAccessed
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_EXIT_TRAP_FRAME TrapFrame,
+    __in PVMX_EXIT_STATE      ExitState,
+    __in ULONG64              AddressAccessed
 );
 
 #define EPT_HOOK_BEHAVIOUR_EXECUTE      ( ( ULONG32 )0x00000000L ) //PageHook execute   PageOriginal read/write
-#define EPT_HOOK_BEHAVIOUR_READ         ( ( ULONG32 )0x00000001L ) //PageHook read      PageOriginal execute/write
-#define EPT_HOOK_BEHAVIOUR_WRITE        ( ( ULONG32 )0x00000002L ) //PageHook write     PageOriginal execute/read
-#define EPT_HOOK_BEHAVIOUR_READWRITE    ( ( ULONG32 )0x00000004L ) //PageHook readwrite PageOriginal execute
+#define EPT_HOOK_BEHAVIOUR_READWRITE    ( ( ULONG32 )0x00000001L ) //PageHook readwrite PageOriginal execute
 
 //
 //  with this one, PageHook is used as a physical buffer
@@ -269,13 +171,13 @@ EptPageHookFault(
 //          ExAllocatePoolWithTag or MmAllocatedNonCachedMemory..
 //
 
-#define EPT_HOOK_BEHAVIOUR_HIDE         ( ( ULONG32 )0x00000008L ) 
+#define EPT_HOOK_BEHAVIOUR_HIDE         ( ( ULONG32 )0x00000002L ) 
 
 HVSTATUS
 EptInstallPageHook(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in ULONG64                PageOriginal,
-    __in ULONG64                PageHook,
-    __in ULONG64                PageLength,
-    __in ULONG32                Behaviour
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in ULONG64              PageOriginal,
+    __in ULONG64              PageHook,
+    __in ULONG64              PageLength,
+    __in ULONG32              Behaviour
 );

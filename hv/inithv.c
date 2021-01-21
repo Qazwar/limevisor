@@ -5,8 +5,8 @@
 
 NTSTATUS
 HvDriverEntry(
-    __in PDRIVER_OBJECT     DriverObject,
-    __in PUNICODE_STRING    RegistryPath
+    __in PDRIVER_OBJECT  DriverObject,
+    __in PUNICODE_STRING RegistryPath
 )
 {
     RegistryPath;
@@ -20,7 +20,7 @@ HvDriverEntry(
 
 VOID
 HvDriverUnload(
-    __in PDRIVER_OBJECT     DriverObject
+    __in PDRIVER_OBJECT  DriverObject
 )
 {
     DriverObject;

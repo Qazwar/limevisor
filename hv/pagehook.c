@@ -18,11 +18,11 @@
 
 HVSTATUS
 EptInstallPageHook(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in ULONG64                PageOriginal,
-    __in ULONG64                PageHook,
-    __in ULONG64                PageLength,
-    __in ULONG32                Behaviour
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in ULONG64              PageOriginal,
+    __in ULONG64              PageHook,
+    __in ULONG64              PageLength,
+    __in ULONG32              Behaviour
 )
 {
     PVMX_PAGE_HOOK PageHookEntry;
@@ -37,7 +37,7 @@ EptInstallPageHook(
     PageHookEntry->PageLength = PageLength;
     PageHookEntry->Behaviour = Behaviour;
 
-    if (ProcessorState->HookHead == NULL) {
+    if ( ProcessorState->HookHead == NULL ) {
 
         InitializeListHead( &PageHookEntry->HookLinks );
         ProcessorState->HookHead = &PageHookEntry->HookLinks;
@@ -47,7 +47,7 @@ EptInstallPageHook(
         InsertHeadList( ProcessorState->HookHead, &PageHookEntry->HookLinks );
     }
 
-    for (ULONG64 Page = 0; Page < PageHookEntry->PageLength; Page++) {
+    for ( ULONG64 Page = 0; Page < PageHookEntry->PageLength; Page++ ) {
 
         PageHookEntry->PagePhysical[ Page ].PageHook =
             HvGetPhysicalAddress(
@@ -55,38 +55,28 @@ EptInstallPageHook(
         PageHookEntry->PagePhysical[ Page ].PageOriginal =
             HvGetPhysicalAddress(
             ( PVOID )( PageHookEntry->PageOriginal + Page * 0x1000 ) );
-        PageHookEntry->PagePhysical[ Page ].PML1 =
+        PageHookEntry->PagePhysical[ Page ].PageEntry =
             EptAddressPageEntry(
-            ProcessorState,
-            PageHookEntry->PagePhysical[ Page ].PageOriginal );
+                ProcessorState,
+                PageHookEntry->PagePhysical[ Page ].PageOriginal );
 
-        PageHookEntry->PagePhysical[ Page ].PML1->PageFrameNumber = PageHookEntry->PagePhysical[ Page ].PageHook / 0x1000;
+        PageHookEntry->PagePhysical[ Page ].PageEntry->PageFrameNumber = PageHookEntry->PagePhysical[ Page ].PageHook / 0x1000;
 
-        switch (PageHookEntry->Behaviour) {
+        switch ( PageHookEntry->Behaviour ) {
         case EPT_HOOK_BEHAVIOUR_EXECUTE:;
-            PageHookEntry->PagePhysical[ Page ].PML1->ReadAccess = 0;
-            PageHookEntry->PagePhysical[ Page ].PML1->WriteAccess = 0;
-            PageHookEntry->PagePhysical[ Page ].PML1->ExecuteAccess = 1;
-            break;
-        case EPT_HOOK_BEHAVIOUR_READ:;
-            PageHookEntry->PagePhysical[ Page ].PML1->ReadAccess = 1;
-            PageHookEntry->PagePhysical[ Page ].PML1->WriteAccess = 0;
-            PageHookEntry->PagePhysical[ Page ].PML1->ExecuteAccess = 0;
-            break;
-        case EPT_HOOK_BEHAVIOUR_WRITE:;
-            PageHookEntry->PagePhysical[ Page ].PML1->ReadAccess = 0;
-            PageHookEntry->PagePhysical[ Page ].PML1->WriteAccess = 1;
-            PageHookEntry->PagePhysical[ Page ].PML1->ExecuteAccess = 0;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->ReadAccess = 0;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->WriteAccess = 0;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->ExecuteAccess = 1;
             break;
         case EPT_HOOK_BEHAVIOUR_READWRITE:;
-            PageHookEntry->PagePhysical[ Page ].PML1->ReadAccess = 1;
-            PageHookEntry->PagePhysical[ Page ].PML1->WriteAccess = 1;
-            PageHookEntry->PagePhysical[ Page ].PML1->ExecuteAccess = 0;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->ReadAccess = 1;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->WriteAccess = 1;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->ExecuteAccess = 0;
             break;
         case EPT_HOOK_BEHAVIOUR_HIDE:;
-            PageHookEntry->PagePhysical[ Page ].PML1->ReadAccess = 0;
-            PageHookEntry->PagePhysical[ Page ].PML1->WriteAccess = 0;
-            PageHookEntry->PagePhysical[ Page ].PML1->ExecuteAccess = 1;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->ReadAccess = 0;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->WriteAccess = 0;
+            PageHookEntry->PagePhysical[ Page ].PageEntry->ExecuteAccess = 1;
             break;
         default:
             break;
@@ -105,10 +95,10 @@ EptInstallPageHook(
 
 HVSTATUS
 EptPageHookFault(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PVMX_EXIT_TRAP_FRAME   TrapFrame,
-    __in PVMX_EXIT_STATE        ExitState,
-    __in ULONG64                AddressAccessed
+    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_EXIT_TRAP_FRAME TrapFrame,
+    __in PVMX_EXIT_STATE      ExitState,
+    __in ULONG64              AddressAccessed
 )
 {
     TrapFrame;
@@ -117,34 +107,34 @@ EptPageHookFault(
     PLIST_ENTRY Flink;
     PVMX_PAGE_HOOK PageHook;
 
-    VMX_EXIT_QUALIFICATION_EPT_VIOLATION Qualification;
+    VMX_EQ_EPT_VIOLATION Qualification;
 
 
-    Qualification.Value = ExitState->ExitQualification;
+    Qualification.Long = ExitState->ExitQualification;
 
     Flink = ProcessorState->HookHead;
     do {
         PageHook = CONTAINING_RECORD( Flink, VMX_PAGE_HOOK, HookLinks );
 
-        for (ULONG64 Page = 0; Page < PageHook->PageLength; Page++) {
+        for ( ULONG64 Page = 0; Page < PageHook->PageLength; Page++ ) {
 
-            if (AddressAccessed >= PageHook->PagePhysical[ Page ].PageOriginal &&
-                AddressAccessed <= PageHook->PagePhysical[ Page ].PageOriginal + 0xFFF) {
+            if ( AddressAccessed >= PageHook->PagePhysical[ Page ].PageOriginal &&
+                 AddressAccessed <= PageHook->PagePhysical[ Page ].PageOriginal + 0xFFF ) {
 
-                HvTraceBasic( "Page hook access %p\n", AddressAccessed );
+                HvTraceBasic( "page hook access %p\n", AddressAccessed );
 
-                if (PageHook->PagePhysical[ Page ].PML1->PageFrameNumber == PageHook->PagePhysical[ Page ].PageHook / 0x1000) {
+                if ( PageHook->PagePhysical[ Page ].PageEntry->PageFrameNumber == PageHook->PagePhysical[ Page ].PageHook / 0x1000 ) {
 
-                    PageHook->PagePhysical[ Page ].PML1->PageFrameNumber = PageHook->PagePhysical[ Page ].PageOriginal / 0x1000;
+                    PageHook->PagePhysical[ Page ].PageEntry->PageFrameNumber = PageHook->PagePhysical[ Page ].PageOriginal / 0x1000;
                 }
                 else {
 
-                    PageHook->PagePhysical[ Page ].PML1->PageFrameNumber = PageHook->PagePhysical[ Page ].PageHook / 0x1000;
+                    PageHook->PagePhysical[ Page ].PageEntry->PageFrameNumber = PageHook->PagePhysical[ Page ].PageHook / 0x1000;
                 }
 
-                PageHook->PagePhysical[ Page ].PML1->ReadAccess = !PageHook->PagePhysical[ Page ].PML1->ReadAccess;
-                PageHook->PagePhysical[ Page ].PML1->WriteAccess = !PageHook->PagePhysical[ Page ].PML1->WriteAccess;
-                PageHook->PagePhysical[ Page ].PML1->ExecuteAccess = !PageHook->PagePhysical[ Page ].PML1->ExecuteAccess;
+                PageHook->PagePhysical[ Page ].PageEntry->ReadAccess = !PageHook->PagePhysical[ Page ].PageEntry->ReadAccess;
+                PageHook->PagePhysical[ Page ].PageEntry->WriteAccess = !PageHook->PagePhysical[ Page ].PageEntry->WriteAccess;
+                PageHook->PagePhysical[ Page ].PageEntry->ExecuteAccess = !PageHook->PagePhysical[ Page ].PageEntry->ExecuteAccess;
 
                 ExitState->IncrementIp = FALSE;
 
@@ -153,7 +143,7 @@ EptPageHookFault(
         }
 
         Flink = Flink->Flink;
-    } while (Flink != ProcessorState->HookHead);
+    } while ( Flink != ProcessorState->HookHead );
 
     return HVSTATUS_UNSUCCESSFUL;
 }
