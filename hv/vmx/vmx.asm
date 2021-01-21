@@ -15,16 +15,6 @@ PUBLIC VmxLaunchAndRestore
 PUBLIC @exit_resume
 PUBLIC @exit_vmx
 
-;
-;   exitf.asm
-;
- 
-EXTERNDEF ExfHandleCpuid:PROC
-EXTERNDEF ExfHandleRdmsr:PROC
-EXTERNDEF ExfHandleWrmsr:PROC
-EXTERNDEF ExfHandleSetbv:PROC
-EXTERNDEF ExfHandleInvd:PROC
-
 EXTERNDEF DbgPrint:PROC
 EXTERNDEF KeBugCheck:PROC
 EXTERNDEF VmxHandleExit:PROC
@@ -43,27 +33,6 @@ VmxHandleExitInternal PROC FRAME
     .ALLOCSTACK  28h + (16 * 8)
     .ENDPROLOG
 
-    ;
-    ;   save rax and attempt to use an exitf
-    ;   function instead, rax is needed for the vmread.
-    ;
-
-    mov     qword ptr [rsp + 28h + 50h], r10
-    mov     qword ptr [rsp + 28h + 58h], r11
-
-    ;mov     r10, 4402h                          ; exit reason
-    ;vmread  r10, r10
-    ;cmp     r10b, 0Ah
-    ;jz      ExfHandleCpuid
-    ;cmp     r10b, 0Dh
-    ;jz      ExfHandleInvd
-    ;cmp     r10b, 37h
-    ;jz      ExfHandleSetbv
-    ;cmp     r10b, 1Fh
-    ;jz      ExfHandleRdmsr
-    ;cmp     r10b, 20h
-    ;jz      ExfHandleWrmsr
-
     mov     qword ptr [rsp + 28h + 00h], rax
     mov     qword ptr [rsp + 28h + 08h], rcx
     mov     qword ptr [rsp + 28h + 10h], rdx
@@ -73,8 +42,8 @@ VmxHandleExitInternal PROC FRAME
     mov     qword ptr [rsp + 28h + 38h], rdi
     mov     qword ptr [rsp + 28h + 40h], r8
     mov     qword ptr [rsp + 28h + 48h], r9
-    ; mov     qword ptr [rsp + 28h + 50h], r10
-    ; mov     qword ptr [rsp + 28h + 58h], r11
+    mov     qword ptr [rsp + 28h + 50h], r10
+    mov     qword ptr [rsp + 28h + 58h], r11
     mov     qword ptr [rsp + 28h + 60h], r12
     mov     qword ptr [rsp + 28h + 68h], r13
     mov     qword ptr [rsp + 28h + 70h], r14

@@ -2,96 +2,93 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="inithv.c" />
-    <ClCompile Include="vmxprocessor.c">
-      <Filter>Vmx</Filter>
-    </ClCompile>
-    <ClCompile Include="hvprocessor.c">
-      <Filter>Hv</Filter>
-    </ClCompile>
-    <ClCompile Include="eptprocessor.c">
-      <Filter>Ept</Filter>
-    </ClCompile>
-    <ClCompile Include="trace.c">
-      <Filter>Hv</Filter>
-    </ClCompile>
-    <ClCompile Include="vmcontrol.c">
-      <Filter>Vmx</Filter>
-    </ClCompile>
     <ClCompile Include="mpexec.c" />
-    <ClCompile Include="violation.c">
-      <Filter>Ept</Filter>
+    <ClCompile Include="ept\decompose.c">
+      <Filter>ept</Filter>
     </ClCompile>
-    <ClCompile Include="decompose.c">
-      <Filter>Ept</Filter>
+    <ClCompile Include="ept\eptprocessor.c">
+      <Filter>ept</Filter>
     </ClCompile>
-    <ClCompile Include="pagehook.c">
-      <Filter>Ept</Filter>
+    <ClCompile Include="ept\pagehook.c">
+      <Filter>ept</Filter>
     </ClCompile>
-    <ClCompile Include="vmexit.c">
-      <Filter>Vmx</Filter>
+    <ClCompile Include="ept\violation.c">
+      <Filter>ept</Filter>
     </ClCompile>
-    <ClCompile Include="unimplemented.c">
-      <Filter>Ex</Filter>
+    <ClCompile Include="vmx\vmxprocessor.c">
+      <Filter>vmx</Filter>
     </ClCompile>
-    <ClCompile Include="hardfault.c">
-      <Filter>Ex</Filter>
+    <ClCompile Include="vmx\vmexit.c">
+      <Filter>vmx</Filter>
     </ClCompile>
-    <ClCompile Include="instruction.c">
-      <Filter>Ex</Filter>
+    <ClCompile Include="vmx\vmcontrol.c">
+      <Filter>vmx</Filter>
     </ClCompile>
-    <ClCompile Include="vmvmx.c">
-      <Filter>Ex</Filter>
+    <ClCompile Include="ex\instruction.c">
+      <Filter>ex</Filter>
     </ClCompile>
-    <ClCompile Include="interrupt.c">
-      <Filter>Ex</Filter>
+    <ClCompile Include="ex\interrupt.c">
+      <Filter>ex</Filter>
+    </ClCompile>
+    <ClCompile Include="hv\hvprocessor.c">
+      <Filter>hv</Filter>
+    </ClCompile>
+    <ClCompile Include="ex\hardfault.c">
+      <Filter>ex</Filter>
+    </ClCompile>
+    <ClCompile Include="hv\trace.c">
+      <Filter>hv</Filter>
+    </ClCompile>
+    <ClCompile Include="ex\vmvmx.c">
+      <Filter>ex</Filter>
+    </ClCompile>
+    <ClCompile Include="ex\unimplemented.c">
+      <Filter>ex</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Headers">
-      <UniqueIdentifier>{a1eed1cf-7ac2-44bc-bd9f-55836e5fd573}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Vmx">
+    <Filter Include="vmx">
       <UniqueIdentifier>{308a3332-67da-4835-9461-02c00ddc82a7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Hv">
-      <UniqueIdentifier>{90420330-f3ba-4104-b6ab-8514c213f105}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Ept">
-      <UniqueIdentifier>{659db128-c7d5-4048-b162-ee5eea2c905a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Svm">
+    <Filter Include="svm">
       <UniqueIdentifier>{c5ac602b-fced-49ac-bba4-ec0237ee3d6e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Ex">
+    <Filter Include="hv">
+      <UniqueIdentifier>{90420330-f3ba-4104-b6ab-8514c213f105}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="inc">
+      <UniqueIdentifier>{a1eed1cf-7ac2-44bc-bd9f-55836e5fd573}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ex">
       <UniqueIdentifier>{7709ff2a-513b-48d7-a773-7014cd87667e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ept">
+      <UniqueIdentifier>{659db128-c7d5-4048-b162-ee5eea2c905a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="hv.h">
-      <Filter>Headers</Filter>
+    <ClInclude Include="inc\ept.h">
+      <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="vmx.h">
-      <Filter>Headers</Filter>
+    <ClInclude Include="inc\ex.h">
+      <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="ept.h">
-      <Filter>Headers</Filter>
+    <ClInclude Include="inc\hv.h">
+      <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="mp.h">
-      <Filter>Headers</Filter>
+    <ClInclude Include="inc\mp.h">
+      <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="ex.h">
-      <Filter>Headers</Filter>
+    <ClInclude Include="inc\vmx.h">
+      <Filter>inc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="processordesc.asm">
-      <Filter>Vmx</Filter>
+    <MASM Include="vmx\vmx.asm">
+      <Filter>vmx</Filter>
     </MASM>
-    <MASM Include="vmx.asm">
-      <Filter>Vmx</Filter>
-    </MASM>
-    <MASM Include="exitf.asm">
-      <Filter>Vmx</Filter>
+    <MASM Include="vmx\processordesc.asm">
+      <Filter>vmx</Filter>
     </MASM>
   </ItemGroup>
 </Project>

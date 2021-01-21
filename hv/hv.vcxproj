@@ -105,34 +105,33 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="decompose.c" />
-    <ClCompile Include="eptprocessor.c" />
-    <ClCompile Include="hardfault.c" />
+    <ClCompile Include="ept\decompose.c" />
+    <ClCompile Include="ept\eptprocessor.c" />
+    <ClCompile Include="ex\hardfault.c" />
     <ClCompile Include="inithv.c" />
-    <ClCompile Include="instruction.c" />
-    <ClCompile Include="interrupt.c" />
+    <ClCompile Include="ex\instruction.c" />
+    <ClCompile Include="ex\interrupt.c" />
     <ClCompile Include="mpexec.c" />
-    <ClCompile Include="pagehook.c" />
-    <ClCompile Include="trace.c" />
-    <ClCompile Include="unimplemented.c" />
-    <ClCompile Include="violation.c" />
-    <ClCompile Include="vmcontrol.c" />
-    <ClCompile Include="vmexit.c" />
-    <ClCompile Include="vmvmx.c" />
-    <ClCompile Include="vmxprocessor.c" />
-    <ClCompile Include="hvprocessor.c" />
+    <ClCompile Include="ept\pagehook.c" />
+    <ClCompile Include="hv\trace.c" />
+    <ClCompile Include="ex\unimplemented.c" />
+    <ClCompile Include="ept\violation.c" />
+    <ClCompile Include="vmx\vmcontrol.c" />
+    <ClCompile Include="vmx\vmexit.c" />
+    <ClCompile Include="ex\vmvmx.c" />
+    <ClCompile Include="vmx\vmxprocessor.c" />
+    <ClCompile Include="hv\hvprocessor.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ept.h" />
-    <ClInclude Include="ex.h" />
-    <ClInclude Include="hv.h" />
-    <ClInclude Include="mp.h" />
-    <ClInclude Include="vmx.h" />
+    <ClInclude Include="inc\ept.h" />
+    <ClInclude Include="inc\ex.h" />
+    <ClInclude Include="inc\hv.h" />
+    <ClInclude Include="inc\mp.h" />
+    <ClInclude Include="inc\vmx.h" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="exitf.asm" />
-    <MASM Include="processordesc.asm" />
-    <MASM Include="vmx.asm" />
+    <MASM Include="vmx\processordesc.asm" />
+    <MASM Include="vmx\vmx.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
