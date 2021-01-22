@@ -248,7 +248,7 @@ VmxInitializeProcessorControl(
     __vmx_vmwrite( VMCS_CTRL_CR0_READ_SHADOW, __readcr0( ) );
     __vmx_vmwrite( VMCS_CTRL_CR4_READ_SHADOW, __readcr4( ) );
 
-    __vmx_vmwrite( VMCS_CTRL_MSR_BITMAP_ADDRESS, ProcessorState->BitmapMsrPhysical );
+    __vmx_vmwrite( VMCS_CTRL_MSR_BITMAP_ADDRESS, g_CurrentMachine.MsrMapPhysical );
 
     /*
     24.6.3 Exception Bitmap
@@ -277,7 +277,10 @@ VmxInitializeProcessorControl(
     __vmx_vmwrite( VMCS_CTRL_VMEXIT_MSR_STORE_COUNT, 0 );
     __vmx_vmwrite( VMCS_CTRL_VMEXIT_MSR_LOAD_COUNT, 0 );
 
-    __vmx_vmwrite( VMCS_CTRL_VMENTRY_CONTROLS, HvAdjustBitControl( VM_ENTRY_IA32E_MODE, IA32_VMX_TRUE_ENTRY_CTLS ) );
+    __vmx_vmwrite( VMCS_CTRL_VMENTRY_CONTROLS, HvAdjustBitControl(
+        VM_ENTRY_IA32E_MODE |
+        VM_ENTRY_CONCEAL_PIP,
+        IA32_VMX_TRUE_ENTRY_CTLS ) );
     __vmx_vmwrite( VMCS_CTRL_VMENTRY_MSR_LOAD_COUNT, 0 );
     __vmx_vmwrite( VMCS_CTRL_VMENTRY_INTERRUPTION_INFORMATION_FIELD, 0 );
     __vmx_vmwrite( VMCS_CTRL_VMENTRY_EXCEPTION_ERROR_CODE, 0 );
@@ -287,7 +290,7 @@ VmxInitializeProcessorControl(
 
     __vmx_vmwrite( VMCS_CTRL_VIRTUAL_PROCESSOR_IDENTIFIER, 1 );
 
-    __vmx_vmwrite( VMCS_CTRL_EPT_POINTER, ProcessorState->EptPointer.Long );
+    __vmx_vmwrite( VMCS_CTRL_EPT_POINTER, g_CurrentMachine.EptPointer.Long );
 
     VmxInitializeProcessorHostControl( ProcessorState, &ProcessorDescriptor );
     VmxInitializeProcessorGuestControl( ProcessorState, &ProcessorDescriptor );

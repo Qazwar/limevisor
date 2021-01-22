@@ -96,15 +96,6 @@ typedef struct _VMX_PROCESSOR_STATE {
     ULONG64                 HostStack;
     ULONG64                 HostStackSize;
 
-    ULONG64                 BitmapMsr;
-    ULONG64                 BitmapMsrPhysical;
-
-    EPT_POINTER             EptPointer;
-    PVMX_PAGE_TABLE_BASE    PageTable;
-
-    PLIST_ENTRY             HookHead;
-    PLIST_ENTRY             TableHead;
-
 } VMX_PROCESSOR_STATE, *PVMX_PROCESSOR_STATE;
 
 #pragma pack(push, 8)
@@ -539,6 +530,7 @@ typedef struct _VMX_PCB {
 #define VM_ENTRY_LOAD_GUEST_PAT                 0x00004000
 #define VM_ENTRY_LOAD_GUEST_EFER                0x00008000
 #define VM_ENTRY_LOAD_BNDCFGS                   0x00010000
+#define VM_ENTRY_CONCEAL_PIP                    0x00020000
 
 #define SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES 0x00000001
 #define SECONDARY_EXEC_ENABLE_EPT               0x00000002

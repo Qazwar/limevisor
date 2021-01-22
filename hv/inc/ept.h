@@ -126,13 +126,13 @@ EptBuildMap(
 );
 
 HVSTATUS
-EptInitializeProcessor(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+EptInitializeMachine(
+
 );
 
 HVSTATUS
-EptTerminateProcessor(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+EptTerminateMachine(
+
 );
 
 HVSTATUS
@@ -144,8 +144,7 @@ EptViolationFault(
 
 PEPT_PML
 EptAddressPageEntry(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
-    __in ULONG64              PhysicalAddress
+    __in ULONG64 PhysicalAddress
 );
 
 HVSTATUS
@@ -175,9 +174,8 @@ EptPageHookFault(
 
 HVSTATUS
 EptInstallPageHook(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
-    __in ULONG64              PageOriginal,
-    __in ULONG64              PageHook,
-    __in ULONG64              PageLength,
-    __in ULONG32              Behaviour
+    __in ULONG64 PageOriginal,
+    __in ULONG64 PageHook,
+    __in ULONG64 PageLength,
+    __in ULONG32 Behaviour
 );

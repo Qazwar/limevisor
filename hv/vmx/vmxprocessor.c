@@ -17,8 +17,6 @@ VmxInitializeProcessor(
     HVSTATUS hvStatus;
     UCHAR CarryFlag;
 
-    EptInitializeProcessor( ProcessorState );
-
     __writecr4( __readcr4( ) | 0x2000 );
 
     __writecr0( ( __readcr0( ) | __readmsr( IA32_VMX_CR0_FIXED0 ) ) & __readmsr( IA32_VMX_CR0_FIXED1 ) );
@@ -30,18 +28,21 @@ VmxInitializeProcessor(
     CarryFlag = __vmx_on( &ProcessorState->OnRegionPhysical );
     if ( CarryFlag ) {
 
+        __writecr4( __readcr4( ) & ~0x2000 );
         return HVSTATUS_UNSUCCESSFUL;
     }
 
     CarryFlag = __vmx_vmclear( &ProcessorState->ControlRegionPhysical );
     if ( CarryFlag ) {
 
+        __writecr4( __readcr4( ) & ~0x2000 );
         return HVSTATUS_UNSUCCESSFUL;
     }
 
     CarryFlag = __vmx_vmptrld( &ProcessorState->ControlRegionPhysical );
     if ( CarryFlag ) {
 
+        __writecr4( __readcr4( ) & ~0x2000 );
         return HVSTATUS_UNSUCCESSFUL;
     }
 
@@ -50,11 +51,12 @@ VmxInitializeProcessor(
     hvStatus = VmxLaunchAndStore( );
     if ( !HV_SUCCESS( hvStatus ) ) {
 
-        HvTraceBasic( "VMX Launch failure.\n" );
+        HvTraceBasic( "VMX launch failure.\n" );
+        __writecr4( __readcr4( ) & ~0x2000 );
         return hvStatus;
     }
 
-    HvTraceBasic( "VMX Initialized on processor%d\n", HvGetCurrentProcessorNumber( ) );
+    HvTraceBasic( "VMX initialized on processor%d\n", HvGetCurrentProcessorNumber( ) );
 
     return HVSTATUS_SUCCESS;
 }
@@ -64,7 +66,7 @@ VmxTerminateProcessor(
     __in PVMX_PROCESSOR_STATE ProcessorState
 )
 {
-    HVSTATUS hvStatus;
+    ProcessorState;
     int IdRegisters[ 4 ];
 
     __cpuidex( IdRegisters, 0xD3ADB00B, 0 );
@@ -75,8 +77,6 @@ VmxTerminateProcessor(
     }
 
     __writecr4( __readcr4( ) & ~0x2000 );
-
-    hvStatus = EptTerminateProcessor( ProcessorState );
 
     HvTraceBasic( "VMX terminated on processor%d\n", KeGetCurrentProcessorNumber( ) );
 

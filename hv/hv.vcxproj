@@ -60,6 +60,7 @@
     <IntDir>$(Platform)$(ConfigurationName)\</IntDir>
     <EnableInf2cat>false</EnableInf2cat>
     <OutDir>$(SolutionDir)$(Platform)$(ConfigurationName)\</OutDir>
+    <IncludePath>$(IncludePath);$(KMDF_INC_PATH)$(KMDF_VER_PATH);$(ProjectDir)inc</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -106,7 +107,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ept\decompose.c" />
-    <ClCompile Include="ept\eptprocessor.c" />
+    <ClCompile Include="ept\eptvm.c" />
     <ClCompile Include="ex\hardfault.c" />
     <ClCompile Include="inithv.c" />
     <ClCompile Include="ex\instruction.c" />
@@ -118,9 +119,9 @@
     <ClCompile Include="ept\violation.c" />
     <ClCompile Include="vmx\vmcontrol.c" />
     <ClCompile Include="vmx\vmexit.c" />
-    <ClCompile Include="ex\vmvmx.c" />
+    <ClCompile Include="ex\vmxvm.c" />
     <ClCompile Include="vmx\vmxprocessor.c" />
-    <ClCompile Include="hv\hvprocessor.c" />
+    <ClCompile Include="hv\hvvmm.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\ept.h" />

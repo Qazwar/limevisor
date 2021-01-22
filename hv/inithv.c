@@ -12,9 +12,7 @@ HvDriverEntry(
     RegistryPath;
 
     DriverObject->DriverUnload = HvDriverUnload;
-
-    HvInitializeVisor( );
-
+    HvInitializeMachine( );
     return STATUS_SUCCESS;
 }
 
@@ -25,7 +23,7 @@ HvDriverUnload(
 {
     DriverObject;
 
-    HvTerminateVisor( );
+    HvTerminateMachine( );
 
 }
 

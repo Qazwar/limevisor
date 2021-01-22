@@ -188,7 +188,7 @@ VmxLaunchAndRestore PROC FRAME
     ;   when vmlaunch is executed, successfully, it will
     ;   jump here, rax will be set appropriately, either
     ;   by the vmexit (for a triple fault, ept misconfig
-    ;   or other hard fault) which should store unsucessful
+    ;   or other hard fault) which should store unsuccessful
     ;   in rax, or it will be set by VmxLaunchAndStore upon a
     ;   successful launch, the return address is on the top of
     ;   the stack.

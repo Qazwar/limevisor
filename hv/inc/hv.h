@@ -16,6 +16,8 @@
 
 #include <intrin.h>
 
+#define HV_POOL_TAG                         '  VH'
+
 #define HvBitRound( x, y )                   ( ( ( x ) + ( y ) - 1 ) & ~( ( y ) - 1 ) )
 
 #undef  RtlZeroMemory
@@ -53,11 +55,27 @@ typedef union _VMX_EQ_ACCESS_CONTROL        *PVMX_EQ_ACCESS_CONTROL;
 typedef union _VMX_EQ_EPT_VIOLATION         *PVMX_EQ_EPT_VIOLATION;
 typedef union _EPT_PML                      *PEPT_PML;
 
+typedef struct _HV_VMM                      *PHV_VMM;
 
 #include "ept.h"
 #include "vmx.h"
 #include "mp.h"
 #include "ex.h"
+
+typedef struct _HV_VMM {
+    PVMX_PROCESSOR_STATE ProcessorState;
+
+    ULONG64              MsrMap;
+    ULONG64              MsrMapPhysical;
+
+    EPT_POINTER          EptPointer;
+    PVMX_PAGE_TABLE_BASE PageTable;
+
+    PLIST_ENTRY          HookHead;
+    PLIST_ENTRY          TableHead;
+} HV_VMM, *PHV_VMM;
+
+EXTERN HV_VMM g_CurrentMachine;
 
 PFORCEINLINE
 PVMX_PCB
@@ -76,8 +94,6 @@ HvGetCurrentProcessorNumber(
 {
     return KeGetCurrentProcessorNumber( );//HvGetCurrentPcb( )->Number;
 }
-
-EXTERN PVMX_PROCESSOR_STATE g_ProcessorState;
 
 #define HvTraceBasic( _, ... )              DbgPrintEx( DPFLTR_IHVDRIVER_ID, 0, "[Limevisor] " _, __VA_ARGS__ )
 
@@ -109,17 +125,6 @@ HvGetPhysicalAddress(
 }
 
 PFORCEINLINE
-PVMX_PROCESSOR_STATE
-HvGetProcessorState(
-    __in ULONG ProcessorNumber
-)
-{
-    //HvGetCurrentPcb( )->Number
-    //KeGetCurrentProcessorNumber( );
-    return &g_ProcessorState[ ProcessorNumber ];
-}
-
-PFORCEINLINE
 ULONG32
 HvAdjustBitControl(
     __in ULONG32 Value,
@@ -135,12 +140,12 @@ HvAdjustBitControl(
 }
 
 HVSTATUS
-HvInitializeVisor(
+HvInitializeMachine(
 
 );
 
 HVSTATUS
-HvTerminateVisor(
+HvTerminateMachine(
 
 );
 

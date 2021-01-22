@@ -50,7 +50,7 @@ VmxHandleExit(
     ExitState.FinalStatus = HVSTATUS_SUCCESS;
     ExitState.IncrementIp = TRUE;
 
-    ProcessorState = HvGetProcessorState( HvGetCurrentProcessorNumber( ) );
+    ProcessorState = &g_CurrentMachine.ProcessorState[ HvGetCurrentProcessorNumber( ) ];
 
     __vmx_vmread( VMCS_EXIT_REASON, &ExitState.ExitReason );
     __vmx_vmread( VMCS_EXIT_QUALIFICATION, &ExitState.ExitQualification );

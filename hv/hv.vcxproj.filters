@@ -6,9 +6,6 @@
     <ClCompile Include="ept\decompose.c">
       <Filter>ept</Filter>
     </ClCompile>
-    <ClCompile Include="ept\eptprocessor.c">
-      <Filter>ept</Filter>
-    </ClCompile>
     <ClCompile Include="ept\pagehook.c">
       <Filter>ept</Filter>
     </ClCompile>
@@ -30,19 +27,22 @@
     <ClCompile Include="ex\interrupt.c">
       <Filter>ex</Filter>
     </ClCompile>
-    <ClCompile Include="hv\hvprocessor.c">
-      <Filter>hv</Filter>
-    </ClCompile>
     <ClCompile Include="ex\hardfault.c">
       <Filter>ex</Filter>
     </ClCompile>
     <ClCompile Include="hv\trace.c">
       <Filter>hv</Filter>
     </ClCompile>
-    <ClCompile Include="ex\vmvmx.c">
+    <ClCompile Include="ex\unimplemented.c">
       <Filter>ex</Filter>
     </ClCompile>
-    <ClCompile Include="ex\unimplemented.c">
+    <ClCompile Include="ept\eptvm.c">
+      <Filter>ept</Filter>
+    </ClCompile>
+    <ClCompile Include="hv\hvvmm.c">
+      <Filter>hv</Filter>
+    </ClCompile>
+    <ClCompile Include="ex\vmxvm.c">
       <Filter>ex</Filter>
     </ClCompile>
   </ItemGroup>

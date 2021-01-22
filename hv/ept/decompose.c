@@ -5,8 +5,7 @@
 
 PVMX_PAGE_TABLE
 EptDecomposeLargeLevel2(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in PEPT_PML               LargePage
+    __in PEPT_PML LargePage
 )
 {
     //
@@ -21,9 +20,7 @@ EptDecomposeLargeLevel2(
 
     PVMX_PAGE_TABLE PageTable;
 
-    PHYSICAL_ADDRESS Max = { ~0ULL };
-
-    PageTable = MmAllocateContiguousMemory( sizeof( VMX_PAGE_TABLE ), Max );//ExAllocatePoolWithTag( NonPagedPool, sizeof( VMX_PAGE_TABLE ), EPT_POOL_TAG );
+    PageTable = ExAllocatePoolWithTag( NonPagedPool, sizeof( VMX_PAGE_TABLE ), EPT_POOL_TAG );
     RtlZeroMemory( PageTable, sizeof( VMX_PAGE_TABLE ) );
 
     PageTable->PageEntryParent = LargePage;
@@ -48,14 +45,14 @@ EptDecomposeLargeLevel2(
     LargePage->WriteAccess = 1;
     LargePage->ExecuteAccess = 1;
 
-    if ( ProcessorState->TableHead == NULL ) {
+    if ( g_CurrentMachine.TableHead == NULL ) {
 
         InitializeListHead( &PageTable->TableLinks );
-        ProcessorState->TableHead = &PageTable->TableLinks;
+        g_CurrentMachine.TableHead = &PageTable->TableLinks;
     }
     else {
 
-        InsertHeadList( ProcessorState->TableHead, &PageTable->TableLinks );
+        InsertHeadList( g_CurrentMachine.TableHead, &PageTable->TableLinks );
     }
 
     return PageTable;
@@ -63,8 +60,7 @@ EptDecomposeLargeLevel2(
 
 PEPT_PML
 EptAddressPageEntry(
-    __in PVMX_PROCESSOR_STATE   ProcessorState,
-    __in ULONG64                PhysicalAddress
+    __in ULONG64 PhysicalAddress
 )
 {
     PLIST_ENTRY TableFlink;
@@ -72,12 +68,13 @@ EptAddressPageEntry(
     PEPT_PML LargePage;
     PVMX_PAGE_TABLE PageTable;
 
-    LargePage = &ProcessorState->PageTable->Level2[ HvIndexLevel3( PhysicalAddress ) ][ HvIndexLevel2( PhysicalAddress ) ];
+    LargePage = &g_CurrentMachine.PageTable->Level2[ HvIndexLevel3( PhysicalAddress ) ][ HvIndexLevel2( PhysicalAddress ) ];
+    DbgBreakPoint( );
 
     if ( LargePage->LargePage ) {
 
-        PageTable = EptDecomposeLargeLevel2( ProcessorState, LargePage );
-        DbgBreakPoint( );
+        PageTable = EptDecomposeLargeLevel2( LargePage );
+
         return &PageTable->PageEntry[ HvIndexLevel1( PhysicalAddress ) ];
     }
     else {
@@ -87,19 +84,18 @@ EptAddressPageEntry(
         //  inside our doubly linked list of page tables
         //
 
-        TableFlink = ProcessorState->TableHead;
-
+        TableFlink = g_CurrentMachine.TableHead;
         do {
             PageTable = CONTAINING_RECORD( TableFlink, VMX_PAGE_TABLE, TableLinks );
 
             if ( PhysicalAddress >= PageTable->PhysicalBaseAddress &&
-                 PhysicalAddress < PageTable->PhysicalBaseAddress + 0x200000 ) {
+                 PhysicalAddress <= PageTable->PhysicalBaseAddress + 0x1FFFFF ) {
 
                 return &PageTable->PageEntry[ HvIndexLevel1( PhysicalAddress ) ];
             }
 
             TableFlink = TableFlink->Flink;
-        } while ( TableFlink != ProcessorState->TableHead );
+        } while ( TableFlink != g_CurrentMachine.TableHead );
 
         //
         //  this is bad lol
