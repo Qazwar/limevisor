@@ -3,7 +3,7 @@
 
 #include "hv.h"
 
-HV_VMM g_CurrentMachine;
+PVMX_PCB g_ProcessorControl;
 
 HVSTATUS
 HvCheckProcessorSupport(
@@ -114,28 +114,27 @@ HvAllocateMachine(
     PHYSICAL_ADDRESS HighestPhysical = { ~0ULL };
 
     ProcessorCount = KeQueryActiveProcessorCount( 0 );
-    StatePoolSize = sizeof( VMX_PROCESSOR_STATE ) * ProcessorCount;
-    g_CurrentMachine.ProcessorState = ExAllocatePoolWithTag( NonPagedPoolNx, StatePoolSize, HV_POOL_TAG );
-    RtlZeroMemory( g_CurrentMachine.ProcessorState, StatePoolSize );
+    StatePoolSize = sizeof( VMX_PCB ) * ProcessorCount;
+    g_ProcessorControl = ExAllocatePoolWithTag( NonPagedPoolNx, StatePoolSize, HV_POOL_TAG );
+    RtlZeroMemory( g_ProcessorControl, StatePoolSize );
 
     for ( ULONG32 CurrentProcessor = 0; CurrentProcessor < ProcessorCount; CurrentProcessor++ ) {
 
-        g_CurrentMachine.ProcessorState[ CurrentProcessor ].OnRegion = ( ULONG64 )MmAllocateContiguousMemory( 0x2000, HighestPhysical );
-        g_CurrentMachine.ProcessorState[ CurrentProcessor ].OnRegionPhysical =
-            HvGetPhysicalAddress( ( PVOID )g_CurrentMachine.ProcessorState[ CurrentProcessor ].OnRegion );
-        RtlZeroMemory( g_CurrentMachine.ProcessorState[ CurrentProcessor ].OnRegion, 0x2000 );
+        g_ProcessorControl[ CurrentProcessor ].OnRegion = ( ULONG64 )MmAllocateContiguousMemory( 0x2000, HighestPhysical );
+        g_ProcessorControl[ CurrentProcessor ].OnRegionPhysical =
+            HvGetPhysicalAddress( ( PVOID )g_ProcessorControl[ CurrentProcessor ].OnRegion );
+        RtlZeroMemory( g_ProcessorControl[ CurrentProcessor ].OnRegion, 0x2000 );
 
-        g_CurrentMachine.ProcessorState[ CurrentProcessor ].ControlRegion = ( ULONG64 )MmAllocateContiguousMemory( 0x2000, HighestPhysical );
-        g_CurrentMachine.ProcessorState[ CurrentProcessor ].ControlRegionPhysical =
-            HvGetPhysicalAddress( ( PVOID )g_CurrentMachine.ProcessorState[ CurrentProcessor ].ControlRegion );
-        RtlZeroMemory( g_CurrentMachine.ProcessorState[ CurrentProcessor ].ControlRegion, 0x2000 );
+        g_ProcessorControl[ CurrentProcessor ].ControlRegion = ( ULONG64 )MmAllocateContiguousMemory( 0x2000, HighestPhysical );
+        g_ProcessorControl[ CurrentProcessor ].ControlRegionPhysical =
+            HvGetPhysicalAddress( ( PVOID )g_ProcessorControl[ CurrentProcessor ].ControlRegion );
+        RtlZeroMemory( g_ProcessorControl[ CurrentProcessor ].ControlRegion, 0x2000 );
 
-        g_CurrentMachine.ProcessorState[ CurrentProcessor ].HostStackSize = 0x2000;
-        g_CurrentMachine.ProcessorState[ CurrentProcessor ].HostStack =
-            ( ULONG64 )ExAllocatePoolWithTag( NonPagedPool, g_CurrentMachine.ProcessorState[ CurrentProcessor ].HostStackSize, HV_POOL_TAG );
-    }
+        g_ProcessorControl[ CurrentProcessor ].HostStackSize = 0x2000;
+        g_ProcessorControl[ CurrentProcessor ].HostStack =
+            ( ULONG64 )ExAllocatePoolWithTag( NonPagedPool, g_ProcessorControl[ CurrentProcessor ].HostStackSize, HV_POOL_TAG );
 
-    /*
+        /*
         • Read bitmap for low MSRs (located at the MSR-bitmap address). This contains one bit for each MSR address
             in the range 00000000H to 00001FFFH. The bit determines whether an execution of RDMSR applied to that
             MSR causes a VM exit.
@@ -150,12 +149,14 @@ HvAllocateMachine(
             applied to that MSR causes a VM exit.
     */
 
-    g_CurrentMachine.MsrMap = ( ULONG64 )ExAllocatePoolWithTag( NonPagedPool, 0x1000, HV_POOL_TAG );
-    g_CurrentMachine.MsrMapPhysical = ( ULONG64 )HvGetPhysicalAddress( ( PVOID )g_CurrentMachine.MsrMap );
-    RtlZeroMemory( g_CurrentMachine.MsrMap, 0x1000 );
+        g_ProcessorControl[ CurrentProcessor ].MsrMap = ( ULONG64 )ExAllocatePoolWithTag( NonPagedPool, 0x1000, HV_POOL_TAG );
+        g_ProcessorControl[ CurrentProcessor ].MsrMapPhysical = ( ULONG64 )HvGetPhysicalAddress( ( PVOID )g_ProcessorControl[ CurrentProcessor ].MsrMap );
+        RtlZeroMemory( g_ProcessorControl[ CurrentProcessor ].MsrMap, 0x1000 );
 
-    *( ULONG64* )( g_CurrentMachine.MsrMap + ( IA32_FEATURE_CONTROL / 64 ) ) |= 1ULL << ( IA32_FEATURE_CONTROL % 64 );
-    *( ULONG64* )( g_CurrentMachine.MsrMap + ( IA32_FEATURE_CONTROL / 64 ) + 2048 ) |= 1ULL << ( IA32_FEATURE_CONTROL % 64 );
+        *( ULONG64* )( g_ProcessorControl[ CurrentProcessor ].MsrMap + ( IA32_FEATURE_CONTROL / 64 ) ) |= 1ULL << ( IA32_FEATURE_CONTROL % 64 );
+        *( ULONG64* )( g_ProcessorControl[ CurrentProcessor ].MsrMap + ( IA32_FEATURE_CONTROL / 64 ) + 2048 ) |= 1ULL << ( IA32_FEATURE_CONTROL % 64 );
+
+    }
 }
 
 VOID
@@ -169,14 +170,13 @@ HvFreeMachine(
 
     for ( ULONG32 CurrentProcessor = 0; CurrentProcessor < ProcessorCount; CurrentProcessor++ ) {
 
-        MmFreeContiguousMemory( ( PVOID )g_CurrentMachine.ProcessorState[ CurrentProcessor ].OnRegion );
-        MmFreeContiguousMemory( ( PVOID )g_CurrentMachine.ProcessorState[ CurrentProcessor ].ControlRegion );
-        ExFreePoolWithTag( ( PVOID )g_CurrentMachine.ProcessorState[ CurrentProcessor ].HostStack, HV_POOL_TAG );
+        MmFreeContiguousMemory( ( PVOID )g_ProcessorControl[ CurrentProcessor ].OnRegion );
+        MmFreeContiguousMemory( ( PVOID )g_ProcessorControl[ CurrentProcessor ].ControlRegion );
+        ExFreePoolWithTag( ( PVOID )g_ProcessorControl[ CurrentProcessor ].HostStack, HV_POOL_TAG );
+        ExFreePoolWithTag( ( PVOID )g_ProcessorControl[ CurrentProcessor ].MsrMap, HV_POOL_TAG );
     }
 
-    ExFreePoolWithTag( g_CurrentMachine.ProcessorState, HV_POOL_TAG );
-
-    ExFreePoolWithTag( ( PVOID )g_CurrentMachine.MsrMap, HV_POOL_TAG );
+    ExFreePoolWithTag( g_ProcessorControl, HV_POOL_TAG );
 }
 
 HVSTATUS
@@ -191,7 +191,18 @@ HvInitializeProcessor(
     //  irql = dispatch_level
     //
 
-    return VmxInitializeProcessor( &g_CurrentMachine.ProcessorState[ KeGetCurrentProcessorNumber( ) ] );
+    HVSTATUS hvStatus;
+    PVMX_PCB ProcessorState;
+
+    ProcessorState = &g_ProcessorControl[ KeGetCurrentProcessorNumber( ) ];
+
+    hvStatus = EptInitializeProcessor( ProcessorState );
+    if ( !HV_SUCCESS( hvStatus ) ) {
+
+        return hvStatus;
+    }
+
+    return VmxInitializeProcessor( ProcessorState );
 }
 
 HVSTATUS
@@ -200,7 +211,7 @@ HvTerminateProcessor(
 )
 {
 
-    return VmxTerminateProcessor( &g_CurrentMachine.ProcessorState[ HvGetCurrentProcessorNumber( ) ] );
+    return VmxTerminateProcessor( &g_ProcessorControl[ HvGetCurrentProcessorNumber( ) ] );
 }
 
 HVSTATUS
@@ -240,13 +251,6 @@ HvInitializeMachine(
     }
 
     hvStatus = EptInitialize( );
-    if ( !HV_SUCCESS( hvStatus ) ) {
-
-        HvFreeMachine( );
-        return hvStatus;
-    }
-
-    hvStatus = EptInitializeMachine( );
     if ( !HV_SUCCESS( hvStatus ) ) {
 
         HvFreeMachine( );

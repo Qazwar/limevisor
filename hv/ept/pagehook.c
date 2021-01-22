@@ -18,10 +18,11 @@
 
 HVSTATUS
 EptInstallPageHook(
-    __in ULONG64 PageOriginal,
-    __in ULONG64 PageHook,
-    __in ULONG64 PageLength,
-    __in ULONG32 Behaviour
+    __in PVMX_PCB Processor,
+    __in ULONG64  PageOriginal,
+    __in ULONG64  PageHook,
+    __in ULONG64  PageLength,
+    __in ULONG32  Behaviour
 )
 {
     PVMX_PAGE_HOOK PageHookEntry;
@@ -36,14 +37,14 @@ EptInstallPageHook(
     PageHookEntry->PageLength = PageLength;
     PageHookEntry->Behaviour = Behaviour;
 
-    if ( g_CurrentMachine.HookHead == NULL ) {
+    if ( Processor->HookHead == NULL ) {
 
         InitializeListHead( &PageHookEntry->HookLinks );
-        g_CurrentMachine.HookHead = &PageHookEntry->HookLinks;
+        Processor->HookHead = &PageHookEntry->HookLinks;
     }
     else {
 
-        InsertTailList( g_CurrentMachine.HookHead, &PageHookEntry->HookLinks );
+        InsertTailList( Processor->HookHead, &PageHookEntry->HookLinks );
     }
 
     for ( ULONG64 Page = 0; Page < PageHookEntry->PageLength; Page++ ) {
@@ -55,7 +56,7 @@ EptInstallPageHook(
             HvGetPhysicalAddress(
             ( PVOID )( PageHookEntry->PageOriginal + Page * 0x1000 ) );
         PageHookEntry->PagePhysical[ Page ].PageEntry =
-            EptAddressPageEntry( PageHookEntry->PagePhysical[ Page ].PageOriginal );
+            EptAddressPageEntry( Processor, PageHookEntry->PagePhysical[ Page ].PageOriginal );
 
         PageHookEntry->PagePhysical[ Page ].PageEntry->PageFrameNumber = PageHookEntry->PagePhysical[ Page ].PageHook / 0x1000;
 
@@ -92,13 +93,13 @@ EptInstallPageHook(
 
 HVSTATUS
 EptPageHookFault(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState,
     __in ULONG64              AddressAccessed
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
 
@@ -110,7 +111,7 @@ EptPageHookFault(
 
     Qualification.Long = ExitState->ExitQualification;
 
-    Flink = g_CurrentMachine.HookHead;
+    Flink = Processor->HookHead;
     do {
         PageHook = CONTAINING_RECORD( Flink, VMX_PAGE_HOOK, HookLinks );
 
@@ -141,7 +142,7 @@ EptPageHookFault(
         }
 
         Flink = Flink->Flink;
-    } while ( Flink != g_CurrentMachine.HookHead );
+    } while ( Flink != Processor->HookHead );
 
     return HVSTATUS_UNSUCCESSFUL;
 }

@@ -3,27 +3,6 @@
 
 #include "hv.h"
 
-ULONG     g_VmPcbCount = 0;
-PVMX_PCB* g_VmPcbList = NULL;
-
-PVMX_PCB
-VmxCreateVmPcb(
-    __in ULONG ProcessorNumber
-)
-{
-
-    if ( g_VmPcbList == NULL ) {
-
-        g_VmPcbList = ( PVMX_PCB* )ExAllocatePoolWithTag( NonPagedPoolNx, sizeof( PVOID ) * KeNumberProcessors, ' XMV' );
-    }
-
-    g_VmPcbList[ g_VmPcbCount ] = ( PVMX_PCB )ExAllocatePoolWithTag( NonPagedPoolNx, sizeof( VMX_PCB ), ' XMV' );
-    g_VmPcbList[ g_VmPcbCount ]->Address = g_VmPcbList[ g_VmPcbCount ];
-    g_VmPcbList[ g_VmPcbCount ]->Number = ProcessorNumber;
-
-    return g_VmPcbList[ g_VmPcbCount++ ];
-}
-
 VOID
 VmxCopyControlDescriptor(
     __in ULONG64                      SegmentSelector,
@@ -97,11 +76,11 @@ VmxCopyControlDescriptor(
 
 HVSTATUS
 VmxInitializeProcessorGuestControl(
-    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PCB                  Processor,
     __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 )
 {
-    ProcessorState;
+    Processor;
     ProcessorDescriptor;
 
     VMX_SEGMENT_DESCRIPTOR Descriptor;
@@ -166,7 +145,7 @@ VmxInitializeProcessorGuestControl(
 
 HVSTATUS
 VmxInitializeProcessorHostControl(
-    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PCB                  Processor,
     __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 )
 {
@@ -182,7 +161,7 @@ VmxInitializeProcessorHostControl(
     __vmx_vmwrite( VMCS_HOST_IDTR_BASE, ProcessorDescriptor->IdtRegister.BaseAddress );
     __vmx_vmwrite( VMCS_HOST_GDTR_BASE, ProcessorDescriptor->GdtRegister.BaseAddress );
 
-    __vmx_vmwrite( VMCS_HOST_RSP, ProcessorState->HostStack + ProcessorState->HostStackSize );
+    __vmx_vmwrite( VMCS_HOST_RSP, Processor->HostStack + Processor->HostStackSize );
     __vmx_vmwrite( VMCS_HOST_RIP, ( ULONG64 )VmxHandleExitInternal );
 
     __vmx_vmwrite( VMCS_HOST_CR0, __readcr0( ) );
@@ -204,7 +183,7 @@ VmxInitializeProcessorHostControl(
 
 HVSTATUS
 VmxInitializeProcessorControl(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+    __in PVMX_PCB Processor
 )
 {
     VMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor;
@@ -248,7 +227,7 @@ VmxInitializeProcessorControl(
     __vmx_vmwrite( VMCS_CTRL_CR0_READ_SHADOW, __readcr0( ) );
     __vmx_vmwrite( VMCS_CTRL_CR4_READ_SHADOW, __readcr4( ) );
 
-    __vmx_vmwrite( VMCS_CTRL_MSR_BITMAP_ADDRESS, g_CurrentMachine.MsrMapPhysical );
+    __vmx_vmwrite( VMCS_CTRL_MSR_BITMAP_ADDRESS, Processor->MsrMapPhysical );
 
     /*
     24.6.3 Exception Bitmap
@@ -290,10 +269,10 @@ VmxInitializeProcessorControl(
 
     __vmx_vmwrite( VMCS_CTRL_VIRTUAL_PROCESSOR_IDENTIFIER, 1 );
 
-    __vmx_vmwrite( VMCS_CTRL_EPT_POINTER, g_CurrentMachine.EptPointer.Long );
+    __vmx_vmwrite( VMCS_CTRL_EPT_POINTER, Processor->EptPointer.Long );
 
-    VmxInitializeProcessorHostControl( ProcessorState, &ProcessorDescriptor );
-    VmxInitializeProcessorGuestControl( ProcessorState, &ProcessorDescriptor );
+    VmxInitializeProcessorHostControl( Processor, &ProcessorDescriptor );
+    VmxInitializeProcessorGuestControl( Processor, &ProcessorDescriptor );
 
     return HVSTATUS_SUCCESS;
 }

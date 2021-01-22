@@ -11,12 +11,12 @@
 
 HVSTATUS
 ExHandleCpuid(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
 
@@ -55,12 +55,12 @@ ExHandleCpuid(
 
 HVSTATUS
 ExHandleSetbv(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
 
@@ -71,12 +71,12 @@ ExHandleSetbv(
 
 HVSTATUS
 ExHandleInvd(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
 
@@ -87,12 +87,12 @@ ExHandleInvd(
 
 HVSTATUS
 ExHandleControlAccess(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
 
@@ -162,12 +162,12 @@ ExHandleControlAccess(
 
 HVSTATUS
 ExHandleMsrAccess(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
     ULONG64 Access;

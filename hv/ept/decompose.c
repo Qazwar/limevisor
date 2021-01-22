@@ -5,6 +5,7 @@
 
 PVMX_PAGE_TABLE
 EptDecomposeLargeLevel2(
+    __in PVMX_PCB Processor,
     __in PEPT_PML LargePage
 )
 {
@@ -45,14 +46,14 @@ EptDecomposeLargeLevel2(
     LargePage->WriteAccess = 1;
     LargePage->ExecuteAccess = 1;
 
-    if ( g_CurrentMachine.TableHead == NULL ) {
+    if ( Processor->TableHead == NULL ) {
 
         InitializeListHead( &PageTable->TableLinks );
-        g_CurrentMachine.TableHead = &PageTable->TableLinks;
+        Processor->TableHead = &PageTable->TableLinks;
     }
     else {
 
-        InsertHeadList( g_CurrentMachine.TableHead, &PageTable->TableLinks );
+        InsertHeadList( Processor->TableHead, &PageTable->TableLinks );
     }
 
     return PageTable;
@@ -60,7 +61,8 @@ EptDecomposeLargeLevel2(
 
 PEPT_PML
 EptAddressPageEntry(
-    __in ULONG64 PhysicalAddress
+    __in PVMX_PCB Processor,
+    __in ULONG64  PhysicalAddress
 )
 {
     PLIST_ENTRY TableFlink;
@@ -68,12 +70,12 @@ EptAddressPageEntry(
     PEPT_PML LargePage;
     PVMX_PAGE_TABLE PageTable;
 
-    LargePage = &g_CurrentMachine.PageTable->Level2[ HvIndexLevel3( PhysicalAddress ) ][ HvIndexLevel2( PhysicalAddress ) ];
+    LargePage = &Processor->PageTable->Level2[ HvIndexLevel3( PhysicalAddress ) ][ HvIndexLevel2( PhysicalAddress ) ];
     DbgBreakPoint( );
 
     if ( LargePage->LargePage ) {
 
-        PageTable = EptDecomposeLargeLevel2( LargePage );
+        PageTable = EptDecomposeLargeLevel2( Processor, LargePage );
 
         return &PageTable->PageEntry[ HvIndexLevel1( PhysicalAddress ) ];
     }
@@ -84,7 +86,7 @@ EptAddressPageEntry(
         //  inside our doubly linked list of page tables
         //
 
-        TableFlink = g_CurrentMachine.TableHead;
+        TableFlink = Processor->TableHead;
         do {
             PageTable = CONTAINING_RECORD( TableFlink, VMX_PAGE_TABLE, TableLinks );
 
@@ -95,7 +97,7 @@ EptAddressPageEntry(
             }
 
             TableFlink = TableFlink->Flink;
-        } while ( TableFlink != g_CurrentMachine.TableHead );
+        } while ( TableFlink != Processor->TableHead );
 
         //
         //  this is bad lol

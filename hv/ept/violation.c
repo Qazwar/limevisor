@@ -5,12 +5,12 @@
 
 HVSTATUS
 EptViolationFault(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
 
@@ -33,7 +33,7 @@ EptViolationFault(
         return HVSTATUS_SUCCESS;
     }
 
-    hvStatus = EptPageHookFault( ProcessorState, TrapFrame, ExitState, AddressAccessed );
+    hvStatus = EptPageHookFault( Processor, TrapFrame, ExitState, AddressAccessed );
     if ( HV_SUCCESS( hvStatus ) ) {
 
         return hvStatus;

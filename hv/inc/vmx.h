@@ -86,17 +86,26 @@ typedef struct _VMX_PAGE_TABLE {
 } VMX_PAGE_TABLE, *PVMX_PAGE_TABLE;
 
 
-typedef struct _VMX_PROCESSOR_STATE {
-    ULONG64                 OnRegion;
-    ULONG64                 OnRegionPhysical;
+typedef struct _VMX_PCB {
+    ULONG64              OnRegion;
+    ULONG64              OnRegionPhysical;
 
-    ULONG64                 ControlRegion;
-    ULONG64                 ControlRegionPhysical;
+    ULONG64              ControlRegion;
+    ULONG64              ControlRegionPhysical;
 
-    ULONG64                 HostStack;
-    ULONG64                 HostStackSize;
+    ULONG64              HostStack;
+    ULONG64              HostStackSize;
 
-} VMX_PROCESSOR_STATE, *PVMX_PROCESSOR_STATE;
+    ULONG64              MsrMap;
+    ULONG64              MsrMapPhysical;
+
+    EPT_POINTER          EptPointer;
+    PVMX_PAGE_TABLE_BASE PageTable;
+
+    PLIST_ENTRY          HookHead;
+    PLIST_ENTRY          TableHead;
+
+} VMX_PCB, *PVMX_PCB;
 
 #pragma pack(push, 8)
 typedef struct _VMX_EXIT_STATE {
@@ -198,12 +207,6 @@ typedef union _VMX_INTERRUPT_INFORMATION {
 
     ULONG32     Long;
 } VMX_INTERRUPT_INFORMATION, *PVMX_INTERRUPT_INFORMATION;
-
-typedef struct _VMX_PCB {
-    PVOID Address;
-    ULONG Number;
-
-} VMX_PCB, *PVMX_PCB;
 
 #define IA32_FEATURE_CONTROL                                         0x0000003A
 
@@ -554,12 +557,12 @@ typedef struct _VMX_PCB {
 
 HVSTATUS
 VmxInitializeProcessor(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+    __in PVMX_PCB ProcessorState
 );
 
 HVSTATUS
 VmxTerminateProcessor(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+    __in PVMX_PCB ProcessorState
 );
 
 VOID
@@ -569,19 +572,19 @@ VmxGetProcessorDescriptor(
 
 HVSTATUS
 VmxInitializeProcessorGuestControl(
-    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PCB      ProcessorState,
     __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 );
 
 HVSTATUS
 VmxInitializeProcessorHostControl(
-    __in PVMX_PROCESSOR_STATE      ProcessorState,
+    __in PVMX_PCB      ProcessorState,
     __in PVMX_PROCESSOR_DESCRIPTOR ProcessorDescriptor
 );
 
 HVSTATUS
 VmxInitializeProcessorControl(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+    __in PVMX_PCB ProcessorState
 );
 
 HVSTATUS

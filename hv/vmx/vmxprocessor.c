@@ -5,7 +5,7 @@
 
 HVSTATUS
 VmxInitializeProcessor(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+    __in PVMX_PCB Processor
 )
 {
     //
@@ -22,31 +22,31 @@ VmxInitializeProcessor(
     __writecr0( ( __readcr0( ) | __readmsr( IA32_VMX_CR0_FIXED0 ) ) & __readmsr( IA32_VMX_CR0_FIXED1 ) );
     __writecr4( ( __readcr4( ) | __readmsr( IA32_VMX_CR4_FIXED0 ) ) & __readmsr( IA32_VMX_CR4_FIXED1 ) );
 
-    *( ULONG32* )ProcessorState->OnRegion = ( ULONG32 )__readmsr( IA32_VMX_BASIC );
-    *( ULONG32* )ProcessorState->ControlRegion = ( ULONG32 )__readmsr( IA32_VMX_BASIC );
+    *( ULONG32* )Processor->OnRegion = ( ULONG32 )__readmsr( IA32_VMX_BASIC );
+    *( ULONG32* )Processor->ControlRegion = ( ULONG32 )__readmsr( IA32_VMX_BASIC );
 
-    CarryFlag = __vmx_on( &ProcessorState->OnRegionPhysical );
+    CarryFlag = __vmx_on( &Processor->OnRegionPhysical );
     if ( CarryFlag ) {
 
         __writecr4( __readcr4( ) & ~0x2000 );
         return HVSTATUS_UNSUCCESSFUL;
     }
 
-    CarryFlag = __vmx_vmclear( &ProcessorState->ControlRegionPhysical );
+    CarryFlag = __vmx_vmclear( &Processor->ControlRegionPhysical );
     if ( CarryFlag ) {
 
         __writecr4( __readcr4( ) & ~0x2000 );
         return HVSTATUS_UNSUCCESSFUL;
     }
 
-    CarryFlag = __vmx_vmptrld( &ProcessorState->ControlRegionPhysical );
+    CarryFlag = __vmx_vmptrld( &Processor->ControlRegionPhysical );
     if ( CarryFlag ) {
 
         __writecr4( __readcr4( ) & ~0x2000 );
         return HVSTATUS_UNSUCCESSFUL;
     }
 
-    VmxInitializeProcessorControl( ProcessorState );
+    VmxInitializeProcessorControl( Processor );
 
     hvStatus = VmxLaunchAndStore( );
     if ( !HV_SUCCESS( hvStatus ) ) {
@@ -63,10 +63,10 @@ VmxInitializeProcessor(
 
 HVSTATUS
 VmxTerminateProcessor(
-    __in PVMX_PROCESSOR_STATE ProcessorState
+    __in PVMX_PCB Processor
 )
 {
-    ProcessorState;
+    Processor;
     int IdRegisters[ 4 ];
 
     __cpuidex( IdRegisters, 0xD3ADB00B, 0 );

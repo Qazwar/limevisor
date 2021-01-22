@@ -42,11 +42,10 @@ typedef struct _VMX_EXIT_TRAP_FRAME         *PVMX_EXIT_TRAP_FRAME;
 typedef struct _VMX_SEGMENT_DESCRIPTOR      *PVMX_SEGMENT_DESCRIPTOR;
 typedef struct _VMX_PAGE_TABLE_BASE         *PVMX_PAGE_TABLE_BASE;
 typedef struct _VMX_PAGE_TABLE              *PVMX_PAGE_TABLE;
-typedef struct _VMX_PROCESSOR_STATE         *PVMX_PROCESSOR_STATE;
-typedef struct _VMX_EXIT_STATE              *PVMX_EXIT_STATE;
 typedef struct _VMX_PCB                     *PVMX_PCB;
+typedef struct _VMX_EXIT_STATE              *PVMX_EXIT_STATE;
 typedef HVSTATUS( *PVMX_EXIT_HANDLER )(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
     );
@@ -55,36 +54,12 @@ typedef union _VMX_EQ_ACCESS_CONTROL        *PVMX_EQ_ACCESS_CONTROL;
 typedef union _VMX_EQ_EPT_VIOLATION         *PVMX_EQ_EPT_VIOLATION;
 typedef union _EPT_PML                      *PEPT_PML;
 
-typedef struct _HV_VMM                      *PHV_VMM;
-
 #include "ept.h"
 #include "vmx.h"
 #include "mp.h"
 #include "ex.h"
 
-typedef struct _HV_VMM {
-    PVMX_PROCESSOR_STATE ProcessorState;
-
-    ULONG64              MsrMap;
-    ULONG64              MsrMapPhysical;
-
-    EPT_POINTER          EptPointer;
-    PVMX_PAGE_TABLE_BASE PageTable;
-
-    PLIST_ENTRY          HookHead;
-    PLIST_ENTRY          TableHead;
-} HV_VMM, *PHV_VMM;
-
-EXTERN HV_VMM g_CurrentMachine;
-
-PFORCEINLINE
-PVMX_PCB
-HvGetCurrentPcb(
-
-)
-{
-    return ( PVMX_PCB )__readgsqword( 0 );
-}
+EXTERN PVMX_PCB g_ProcessorControl;
 
 PFORCEINLINE
 ULONG

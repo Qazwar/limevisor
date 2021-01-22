@@ -43,14 +43,14 @@ VmxHandleExit(
 )
 {
     VMX_EXIT_STATE ExitState;
-    PVMX_PROCESSOR_STATE ProcessorState;
+    PVMX_PCB ProcessorState;
 
     ULONG64 ExitInstructionLength;
 
     ExitState.FinalStatus = HVSTATUS_SUCCESS;
     ExitState.IncrementIp = TRUE;
 
-    ProcessorState = &g_CurrentMachine.ProcessorState[ HvGetCurrentProcessorNumber( ) ];
+    ProcessorState = &g_ProcessorControl[ HvGetCurrentProcessorNumber( ) ];
 
     __vmx_vmread( VMCS_EXIT_REASON, &ExitState.ExitReason );
     __vmx_vmread( VMCS_EXIT_QUALIFICATION, &ExitState.ExitQualification );

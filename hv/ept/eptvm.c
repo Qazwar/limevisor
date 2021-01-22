@@ -18,8 +18,8 @@ EptInitialize(
 }
 
 HVSTATUS
-EptInitializeMachine(
-
+EptInitializeProcessor(
+    __in PVMX_PCB Processor
 )
 {
     //
@@ -37,24 +37,24 @@ EptInitializeMachine(
     ULONG64 MemoryMappingMax;
     ULONG64 CurrentRange;
 
-    g_CurrentMachine.HookHead = NULL;
-    g_CurrentMachine.TableHead = NULL;
+    Processor->HookHead = NULL;
+    Processor->TableHead = NULL;
 
-    g_CurrentMachine.PageTable = ExAllocatePoolWithTag( NonPagedPool, sizeof( VMX_PAGE_TABLE_BASE ), EPT_POOL_TAG );
-    RtlZeroMemory( g_CurrentMachine.PageTable, sizeof( VMX_PAGE_TABLE_BASE ) );
+    Processor->PageTable = ExAllocatePoolWithTag( NonPagedPool, sizeof( VMX_PAGE_TABLE_BASE ), EPT_POOL_TAG );
+    RtlZeroMemory( Processor->PageTable, sizeof( VMX_PAGE_TABLE_BASE ) );
 
-    g_CurrentMachine.PageTable->Level4[ 0 ].PageFrameNumber = HvGetPhysicalAddress( g_CurrentMachine.PageTable->Level3 ) >> 12;
-    g_CurrentMachine.PageTable->Level4[ 0 ].ReadAccess = 1;
-    g_CurrentMachine.PageTable->Level4[ 0 ].WriteAccess = 1;
-    g_CurrentMachine.PageTable->Level4[ 0 ].ExecuteAccess = 1;
+    Processor->PageTable->Level4[ 0 ].PageFrameNumber = HvGetPhysicalAddress( Processor->PageTable->Level3 ) >> 12;
+    Processor->PageTable->Level4[ 0 ].ReadAccess = 1;
+    Processor->PageTable->Level4[ 0 ].WriteAccess = 1;
+    Processor->PageTable->Level4[ 0 ].ExecuteAccess = 1;
 
 
     for ( Index3 = 0; Index3 < 512; Index3++ ) {
 
-        g_CurrentMachine.PageTable->Level3[ Index3 ].ReadAccess = 1;
-        g_CurrentMachine.PageTable->Level3[ Index3 ].WriteAccess = 1;
-        g_CurrentMachine.PageTable->Level3[ Index3 ].ExecuteAccess = 1;
-        g_CurrentMachine.PageTable->Level3[ Index3 ].PageFrameNumber = HvGetPhysicalAddress( &g_CurrentMachine.PageTable->Level2[ Index3 ] ) >> 12;
+        Processor->PageTable->Level3[ Index3 ].ReadAccess = 1;
+        Processor->PageTable->Level3[ Index3 ].WriteAccess = 1;
+        Processor->PageTable->Level3[ Index3 ].ExecuteAccess = 1;
+        Processor->PageTable->Level3[ Index3 ].PageFrameNumber = HvGetPhysicalAddress( &Processor->PageTable->Level2[ Index3 ] ) >> 12;
     }
 
     for ( CurrentRange = 0; CurrentRange < g_EptRangeDescriptorsCount; CurrentRange++ ) {
@@ -72,12 +72,12 @@ EptInitializeMachine(
                 g_EptRangeDescriptors[ CurrentRange ].RegionBase +
                 MemoryMappingCount );
 
-            g_CurrentMachine.PageTable->Level2[ Index3 ][ Index2 ].MemoryType = g_EptRangeDescriptors[ CurrentRange ].RegionType;
-            g_CurrentMachine.PageTable->Level2[ Index3 ][ Index2 ].ReadAccess = 1;
-            g_CurrentMachine.PageTable->Level2[ Index3 ][ Index2 ].WriteAccess = 1;
-            g_CurrentMachine.PageTable->Level2[ Index3 ][ Index2 ].ExecuteAccess = 1;
-            g_CurrentMachine.PageTable->Level2[ Index3 ][ Index2 ].LargePage = 1;
-            g_CurrentMachine.PageTable->Level2[ Index3 ][ Index2 ].PageFrameNumber = (
+            Processor->PageTable->Level2[ Index3 ][ Index2 ].MemoryType = g_EptRangeDescriptors[ CurrentRange ].RegionType;
+            Processor->PageTable->Level2[ Index3 ][ Index2 ].ReadAccess = 1;
+            Processor->PageTable->Level2[ Index3 ][ Index2 ].WriteAccess = 1;
+            Processor->PageTable->Level2[ Index3 ][ Index2 ].ExecuteAccess = 1;
+            Processor->PageTable->Level2[ Index3 ][ Index2 ].LargePage = 1;
+            Processor->PageTable->Level2[ Index3 ][ Index2 ].PageFrameNumber = (
                 g_EptRangeDescriptors[ CurrentRange ].RegionBase +
                 MemoryMappingCount ) >> 12;
 
@@ -89,51 +89,51 @@ EptInitializeMachine(
     }
 
     Ept.Long = 0;
-    Ept.PageFrameNumber = HvGetPhysicalAddress( g_CurrentMachine.PageTable->Level4 ) >> 12;
+    Ept.PageFrameNumber = HvGetPhysicalAddress( Processor->PageTable->Level4 ) >> 12;
     Ept.PageWalkLength = 3;
     Ept.EnableAccessAndDirtyFlags = FALSE;
     Ept.MemoryType = MEMORY_TYPE_WRITE_BACK;
 
-    g_CurrentMachine.EptPointer = Ept;
+    Processor->EptPointer = Ept;
 
     return HVSTATUS_SUCCESS;
 }
 
 HVSTATUS
-EptTerminateMachine(
-
+EptTerminateProcessor(
+    __in PVMX_PCB Processor
 )
 {
     PLIST_ENTRY Flink;
     PVMX_PAGE_HOOK PageHook;
     PVMX_PAGE_TABLE PageTable;
 
-    ExFreePoolWithTag( g_CurrentMachine.PageTable, EPT_POOL_TAG );
+    ExFreePoolWithTag( Processor->PageTable, EPT_POOL_TAG );
 
-    if ( g_CurrentMachine.HookHead != NULL ) {
+    if ( Processor->HookHead != NULL ) {
 
-        Flink = g_CurrentMachine.HookHead;
+        Flink = Processor->HookHead;
         do {
             PageHook = CONTAINING_RECORD( Flink, VMX_PAGE_HOOK, HookLinks );
             Flink = Flink->Flink;
             ExFreePoolWithTag( PageHook, EPT_POOL_TAG );
 
-        } while ( Flink != g_CurrentMachine.HookHead );
+        } while ( Flink != Processor->HookHead );
 
-        g_CurrentMachine.HookHead = NULL;
+        Processor->HookHead = NULL;
     }
 
-    if ( g_CurrentMachine.TableHead != NULL ) {
+    if ( Processor->TableHead != NULL ) {
 
-        Flink = g_CurrentMachine.TableHead;
+        Flink = Processor->TableHead;
         do {
             PageTable = CONTAINING_RECORD( Flink, VMX_PAGE_TABLE, TableLinks );
             Flink = Flink->Flink;
             ExFreePoolWithTag( PageTable, EPT_POOL_TAG );
 
-        } while ( Flink != g_CurrentMachine.TableHead );
+        } while ( Flink != Processor->TableHead );
 
-        g_CurrentMachine.TableHead = NULL;
+        Processor->TableHead = NULL;
     }
 
     return HVSTATUS_SUCCESS;

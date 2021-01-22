@@ -5,12 +5,12 @@
 
 HVSTATUS
 ExHandleEptMisconfig(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB             Processor,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
 {
-    ProcessorState;
+    Processor;
     TrapFrame;
     ExitState;
 
@@ -22,7 +22,7 @@ ExHandleEptMisconfig(
 
 HVSTATUS
 ExHandleHardFault(
-    __in PVMX_PROCESSOR_STATE ProcessorState,
+    __in PVMX_PCB ProcessorState,
     __in PVMX_EXIT_TRAP_FRAME TrapFrame,
     __in PVMX_EXIT_STATE      ExitState
 )
